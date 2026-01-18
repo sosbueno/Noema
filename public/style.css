@@ -192,6 +192,20 @@ header a h1 {
     animation: fadein 500ms ease-in;
 }
 
+/* Hide header and 3D logo on guess screen */
+#guess-screen.active ~ * header,
+#guess-screen.active ~ header,
+body:has(#guess-screen.active) header,
+body:has(#guess-screen.active) .landingimage {
+    display: none;
+}
+
+/* Alternative approach - use JavaScript to add class */
+body.guess-screen-active header,
+body.guess-screen-active .landingimage {
+    display: none;
+}
+
 .welcome-message {
     text-align: center;
     margin-top: -30px;

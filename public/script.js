@@ -270,6 +270,13 @@ const endMessage = document.getElementById('end-message');
 function showScreen(screen) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     screen.classList.add('active');
+    
+    // Hide header and 3D logo on guess screen
+    if (screen.id === 'guess-screen') {
+        document.body.classList.add('guess-screen-active');
+    } else {
+        document.body.classList.remove('guess-screen-active');
+    }
 }
 
 // Update progress bar

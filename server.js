@@ -101,11 +101,6 @@ function extractGuessName(text) {
 function cleanResponse(text) {
   if (!text) return text;
   
-  // Check if it's a guess first - preserve guess format
-  const isGuess = text.toLowerCase().includes('i think you are thinking of') || 
-                  text.toLowerCase().includes('are you thinking of') ||
-                  text.toLowerCase().includes('you are thinking of');
-  
   // Remove markdown bold/italic
   text = text.replace(/\*\*([^*]+)\*\*/g, '$1'); // **bold** -> bold
   text = text.replace(/\*([^*]+)\*/g, '$1'); // *italic* -> italic
@@ -117,6 +112,20 @@ function cleanResponse(text) {
   text = text.replace(/[\u{2600}-\u{26FF}]/gu, ''); // Miscellaneous symbols
   text = text.replace(/[\u{2700}-\u{27BF}]/gu, ''); // Dingbats
   
+  // Check if it's a guess in question form like "Is your character Donald Trump?"
+  const questionGuessPattern = /^Is your character (.*?)\?$/i;
+  const questionGuessMatch = text.match(questionGuessPattern);
+  if (questionGuessMatch) {
+    // Convert question-guess to statement-guess
+    const name = questionGuessMatch[1].trim();
+    text = `I think you are thinking of: ${name}`;
+  }
+  
+  // Check if it's a guess (statement format)
+  const isGuess = text.toLowerCase().includes('i think you are thinking of') || 
+                  text.toLowerCase().includes('are you thinking of') ||
+                  text.toLowerCase().includes('you are thinking of');
+  
   // Remove common greeting/exclamation patterns at start (only for questions)
   if (!isGuess) {
     text = text.replace(/^(Great!|Awesome!|Perfect!|Okay!|Let's play!|Alright!|Great|Awesome|Perfect|Okay|Alright)[\s!:\s]*/i, '');
@@ -127,8 +136,10 @@ function cleanResponse(text) {
   // Trim and ensure single spaces
   text = text.trim().replace(/\s+/g, ' ');
   
-  // If it's a guess, return as-is
+  // If it's a guess, return as-is (statements, not questions)
   if (isGuess) {
+    // Remove any trailing question marks from guesses
+    text = text.replace(/\s*\?+$/, '');
     return text;
   }
   
@@ -155,17 +166,62 @@ async function getInfoForGuess(name) {
         imageUrl = data.thumbnail.source.replace('/thumb/', '/').split('/').slice(0, -1).join('/');
       }
       
-      // Extract description/occupation from extract (first sentence usually has this)
-      let description = data.extract || data.description || '';
-      // Get first sentence which typically contains occupation/role
-      const firstSentence = description.split('.')[0];
-      // If extract starts with the name, get the part after it
-      const namePattern = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[,\\-–—]?\\s*`, 'i');
-      const cleanDescription = firstSentence.replace(namePattern, '').trim();
+      // Extract short occupation/description - just the role/title like "45th and 47th U.S. President, Businessman"
+      let description = '';
+      
+      // First try Wikipedia description field - it's often concise
+      if (data.description && data.description.length <= 100) {
+        description = data.description;
+      } else {
+        // Extract from extract text - look for occupation patterns
+        const extract = data.extract || '';
+        
+        // Try to find patterns like "Xth President" or "Xth and Yth President"
+        const presidentMatch = extract.match(/(\d+(?:st|nd|rd|th)?(?:\s+and\s+\d+(?:st|nd|rd|th)?)?\s+(?:U\.?S\.?|United States)?\s*President(?:,?\s+[^,\.]+)?)/i);
+        if (presidentMatch) {
+          description = presidentMatch[1].trim().replace(/\s+/g, ' ');
+        } else {
+          // Try common occupation patterns (Businessman, Actor, Singer, etc.)
+          const occupationPatterns = [
+            /(Businessman[^,\.]*)/i,
+            /(Actor[^,\.]*)/i,
+            /(Singer[^,\.]*)/i,
+            /(Politician[^,\.]*)/i,
+            /(Writer[^,\.]*)/i,
+            /(Athlete[^,\.]*)/i,
+            /(Artist[^,\.]*)/i
+          ];
+          
+          const occupations = [];
+          for (const pattern of occupationPatterns) {
+            const match = extract.match(pattern);
+            if (match && occupations.length < 2) {
+              occupations.push(match[1].trim());
+            }
+          }
+          
+          if (occupations.length > 0) {
+            description = occupations.join(', ');
+          } else {
+            // Fallback: get first meaningful part after name
+            const firstSentence = extract.split('.')[0];
+            const namePattern = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[,\\-–—]?\\s*`, 'i');
+            let fallbackDesc = firstSentence.replace(namePattern, '').trim();
+            // Take only up to first comma or 60 chars
+            const commaIndex = fallbackDesc.indexOf(',');
+            if (commaIndex > 0 && commaIndex < 60) {
+              fallbackDesc = fallbackDesc.substring(0, commaIndex);
+            } else if (fallbackDesc.length > 60) {
+              fallbackDesc = fallbackDesc.substring(0, 57) + '...';
+            }
+            description = fallbackDesc;
+          }
+        }
+      }
       
       return {
         imageUrl,
-        description: cleanDescription || data.description || ''
+        description: description || ''
       };
     }
   } catch (error) {
