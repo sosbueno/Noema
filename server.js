@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
+const fs = require('fs').promises;
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -22,6 +24,51 @@ if (!process.env.ANTHROPIC_API_KEY) {
 
 // Store game sessions
 const gameSessions = new Map();
+
+// Learning data file path
+const LEARNING_FILE = path.join(__dirname, 'learning-data.json');
+
+// Load learning data (wrong guesses and correct answers)
+async function loadLearningData() {
+  try {
+    const data = await fs.readFile(LEARNING_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    // File doesn't exist yet, return empty structure
+    return { wrongGuesses: [], correctAnswers: [], questionPatterns: [] };
+  }
+}
+
+// Save learning data
+async function saveLearningData(data) {
+  try {
+    await fs.writeFile(LEARNING_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error('Error saving learning data:', error);
+  }
+}
+
+// Add wrong guess to learning data
+async function addWrongGuess(correctAnswer, guess, conversationHistory) {
+  const learningData = await loadLearningData();
+  learningData.wrongGuesses.push({
+    correctAnswer,
+    wrongGuess: guess,
+    timestamp: new Date().toISOString(),
+    conversationLength: conversationHistory.length
+  });
+  await saveLearningData(learningData);
+}
+
+// Add correct guess to learning data
+async function addCorrectGuess(answer) {
+  const learningData = await loadLearningData();
+  learningData.correctAnswers.push({
+    answer,
+    timestamp: new Date().toISOString()
+  });
+  await saveLearningData(learningData);
+}
 
 // Extract name from guess text
 function extractGuessName(text) {
@@ -93,38 +140,49 @@ function cleanResponse(text) {
   return text;
 }
 
-// Get image URL from Wikipedia
-async function getImageForGuess(name) {
+// Get image URL and description/occupation from Wikipedia
+async function getInfoForGuess(name) {
   try {
     const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`;
     const response = await fetch(searchUrl);
     if (response.ok) {
       const data = await response.json();
+      
+      let imageUrl = null;
       if (data.original && data.original.source) {
-        return data.original.source;
+        imageUrl = data.original.source;
       } else if (data.thumbnail && data.thumbnail.source) {
-        return data.thumbnail.source.replace('/thumb/', '/').split('/').slice(0, -1).join('/');
+        imageUrl = data.thumbnail.source.replace('/thumb/', '/').split('/').slice(0, -1).join('/');
       }
+      
+      // Extract description/occupation from extract (first sentence usually has this)
+      let description = data.extract || data.description || '';
+      // Get first sentence which typically contains occupation/role
+      const firstSentence = description.split('.')[0];
+      // If extract starts with the name, get the part after it
+      const namePattern = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[,\\-–—]?\\s*`, 'i');
+      const cleanDescription = firstSentence.replace(namePattern, '').trim();
+      
+      return {
+        imageUrl,
+        description: cleanDescription || data.description || ''
+      };
     }
   } catch (error) {
-    console.error('Error fetching image:', error);
+    console.error('Error fetching info from Wikipedia:', error);
   }
-  return null;
+  return { imageUrl: null, description: null };
 }
 
-// API endpoint to get image for a guess
-app.get('/api/game/image/:name', async (req, res) => {
+// API endpoint to get image and info for a guess
+app.get('/api/game/info/:name', async (req, res) => {
   try {
     const name = decodeURIComponent(req.params.name);
-    const imageUrl = await getImageForGuess(name);
-    if (imageUrl) {
-      res.json({ imageUrl });
-    } else {
-      res.json({ imageUrl: null });
-    }
+    const info = await getInfoForGuess(name);
+    res.json(info);
   } catch (error) {
-    console.error('Error getting image:', error);
-    res.json({ imageUrl: null });
+    console.error('Error getting info:', error);
+    res.json({ imageUrl: null, description: null });
   }
 });
 
@@ -132,11 +190,19 @@ app.get('/api/game/image/:name', async (req, res) => {
 app.post('/api/game/start', async (req, res) => {
   try {
     const sessionId = Date.now().toString();
-    const systemPrompt = 'You are playing Akinator. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask strategic questions that eliminate as many people as possible. Questions can vary in length (like "Is your character a female?" or "Does your character personally know you?"). Start directly with the question. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, or even the player themselves. After asking enough strategic questions (8-15 questions), make a guess formatted as: "I think you are thinking of: [NAME]"';
+    // Vary first question - sometimes gender, sometimes real/fictional
+    const firstQuestionVariants = [
+      'Ask your first question. Vary it - sometimes start with gender like "Is your character a female?" or "Is your character\'s gender female?", sometimes with "Is your character real?" Start directly with a short question (3-5 words) to eliminate as many people as possible.',
+      'Ask your first question. Choose strategically - either gender (like "Is your character a female?" or "Is your character a male?") or real/fictional ("Is your character real?"). Start directly with a short question (3-5 words).',
+      'Ask your first question. Start with either gender or real/fictional status. Keep it short (3-5 words). Examples: "Is your character a female?" or "Is your character real?" or "Is your character\'s gender female?"'
+    ];
+    const randomVariant = firstQuestionVariants[Math.floor(Math.random() * firstQuestionVariants.length)];
+    
+    const systemPrompt = 'You are playing Akinator. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask diverse strategic questions - mix gender, real/fictional, occupation, hobbies, relationships, appearance, time period, nationality, etc. Don\'t focus only on occupation. Questions should be varied and unique. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves. After asking enough strategic questions (8-15 questions), make a guess formatted as: "I think you are thinking of: [NAME]". When guessing, be confident with well-known figures - if clues point to someone famous like Donald Trump (president, businessman), Barack Obama (president), Taylor Swift (singer), etc., guess them.';
     
     const conversationHistory = [{
       role: 'user',
-      content: 'Start the game. Ask your first question to eliminate as many people as possible.'
+      content: randomVariant
     }];
 
     const message = await anthropic.messages.create({
@@ -195,14 +261,14 @@ app.post('/api/game/answer', async (req, res) => {
     const yesCount = recentAnswers.filter(a => a.includes('yes') || a.includes('probably')).length;
     const confidence = yesCount / Math.max(recentAnswers.length, 1);
 
-    // Determine if we should encourage a guess (after 8+ questions)
+    // Determine if we should encourage a guess (after 6+ questions for faster guessing)
     const questionCount = session.conversationHistory.filter(m => m.role === 'assistant').length;
-    const shouldEncourageGuess = questionCount >= 8 && (confidence > 0.5 || questionCount >= 12);
+    const shouldEncourageGuess = questionCount >= 6 && (confidence > 0.4 || questionCount >= 10);
 
-    let systemPrompt = 'Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask strategic questions that narrow down possibilities. Questions can vary in length naturally (like "Is your character a female?" or "Does your character personally know you?" or "Is your character linked with sports?"). The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, or even the player themselves. When you have enough information (typically after 8-15 strategic questions), make a guess formatted as: "I think you are thinking of: [NAME]"';
+    let systemPrompt = 'Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask diverse strategic questions - mix gender, real/fictional, occupation, hobbies, relationships, appearance, time period, nationality, media presence, etc. Don\'t focus only on occupation. Questions should be varied and unique. Questions can vary in length naturally (like "Is your character a female?" or "Does your character personally know you?" or "Is your character linked with sports?"). The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves. When you have enough information (typically after 8-15 strategic questions), make a guess formatted as: "I think you are thinking of: [NAME]"';
     
     if (shouldEncourageGuess) {
-      systemPrompt = 'You have asked enough questions. If you are confident, make your guess now. Format as: "I think you are thinking of: [NAME]". If you need more information, ask ONE more strategic question. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO greetings. NO reactions. The person could be ANYONE - real or fictional, famous or obscure, or even the player themselves.';
+      systemPrompt = 'You have asked enough questions. Make your guess now based on the information gathered. Be confident - if clues match a well-known person (like Donald Trump, Barack Obama, Albert Einstein, Taylor Swift, etc.), guess them. Format as: "I think you are thinking of: [NAME]". If you are truly unsure, ask ONE more strategic question. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO greetings. NO reactions. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves.';
     }
 
     const message = await anthropic.messages.create({
@@ -230,9 +296,14 @@ app.post('/api/game/answer', async (req, res) => {
     const progress = Math.min(95, baseProgress + confidenceBoost); // Cap at 95% until guess
 
     let guessName = null;
+    let guessInfo = null;
 
     if (isGuess) {
       guessName = extractGuessName(response);
+      // Fetch info (image and description) for the guess
+      if (guessName) {
+        guessInfo = await getInfoForGuess(guessName);
+      }
     }
 
     res.json({
@@ -240,7 +311,9 @@ app.post('/api/game/answer', async (req, res) => {
       isGuess,
       questionCount: questionCount + 1,
       progress: isGuess ? 100 : progress,
-      guessName: guessName || undefined
+      guessName: guessName || undefined,
+      guessImage: guessInfo?.imageUrl || undefined,
+      guessDescription: guessInfo?.description || undefined
     });
   } catch (error) {
     console.error('Error processing answer:', error);
@@ -264,11 +337,33 @@ app.post('/api/game/guess-result', async (req, res) => {
     const session = gameSessions.get(sessionId);
     
     if (correct) {
+      // Save correct guess to learning data
+      const lastGuess = session.conversationHistory
+        .filter(m => m.role === 'assistant')
+        .slice(-1)[0]?.content;
+      if (lastGuess) {
+        const guessedName = extractGuessName(lastGuess);
+        if (guessedName) {
+          await addCorrectGuess(guessedName);
+        }
+      }
+      
       session.conversationHistory.push({
         role: 'user',
         content: 'Yes, that\'s correct!'
       });
     } else {
+      // Save wrong guess to learning data
+      const lastGuess = session.conversationHistory
+        .filter(m => m.role === 'assistant')
+        .slice(-1)[0]?.content;
+      if (lastGuess && actualAnswer) {
+        const guessedName = extractGuessName(lastGuess);
+        if (guessedName) {
+          await addWrongGuess(actualAnswer, guessedName, session.conversationHistory);
+        }
+      }
+      
       session.conversationHistory.push({
         role: 'user',
         content: `No, that's not correct. ${actualAnswer ? `The correct answer is: ${actualAnswer}` : 'Please ask more questions.'}`
@@ -278,7 +373,7 @@ app.post('/api/game/guess-result', async (req, res) => {
       const message = await anthropic.messages.create({
         model: 'claude-opus-4-5-20251101',
         max_tokens: 100,
-        system: 'Your guess was wrong. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. Ask strategic questions that narrow down possibilities (questions can vary in length naturally). The person could be ANYONE - real or fictional, famous or obscure, or even the player themselves. Ask 3-5 more strategic questions then guess again. Format guess as: "I think you are thinking of: [NAME]"',
+        system: 'Your guess was wrong. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. Ask diverse strategic questions - mix gender, real/fictional, occupation, hobbies, relationships, appearance, time period, nationality, media presence, etc. Don\'t focus only on occupation. Questions should be varied and unique. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves. Ask 3-5 more strategic questions then guess again. Format guess as: "I think you are thinking of: [NAME]"',
         messages: session.conversationHistory
       });
 

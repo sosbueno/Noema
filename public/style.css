@@ -415,6 +415,14 @@ header a h1 {
     object-fit: contain;
 }
 
+.guess-description {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 10px 0 20px 0;
+    font-style: italic;
+    line-height: 1.4;
+}
+
 .guess-text {
     background: rgba(255, 245, 240, 0.8);
     border: 2px solid #ff6b35;

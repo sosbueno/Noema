@@ -253,6 +253,7 @@ const loading = document.getElementById('loading');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
 const guessText = document.getElementById('guess-text');
+const guessDescription = document.getElementById('guess-description');
 const guessImageContainer = document.getElementById('guess-image-container');
 const guessImage = document.getElementById('guess-image');
 const correctBtn = document.getElementById('correct-btn');
@@ -400,6 +401,14 @@ async function submitAnswer(answer) {
             // Extract and display guess name
             const guessName = data.guessName || data.question.replace(/^(I think you are thinking of|Are you thinking of)[:\s]+/i, '').replace(/[?\.]$/, '').trim();
             guessText.textContent = guessName;
+            
+            // Display description/occupation if available
+            if (data.guessDescription) {
+                guessDescription.textContent = data.guessDescription;
+                guessDescription.style.display = 'block';
+            } else {
+                guessDescription.style.display = 'none';
+            }
             
             // Try to load image
             loadGuessImage(guessName, data.guessImage);
@@ -604,6 +613,8 @@ playAgainBtn.addEventListener('click', () => {
     correctBtn.disabled = false;
     guessImageContainer.style.display = 'none';
     guessImage.src = '';
+    guessDescription.textContent = '';
+    guessDescription.style.display = 'none';
     updateProgress(0);
     showScreen(startScreen);
 });
