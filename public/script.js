@@ -451,7 +451,7 @@ async function submitAnswer(answer) {
             }));
             
             // Redirect to guess page
-            window.location.href = 'guess.html';
+            window.location.replace('guess.html');
         } else {
             lastQuestion = data.question;
             questionText.textContent = data.question;

@@ -326,7 +326,26 @@ app.post('/api/game/answer', async (req, res) => {
     const questionCount = session.conversationHistory.filter(m => m.role === 'assistant').length;
     const shouldEncourageGuess = questionCount >= 6 && (confidence > 0.4 || questionCount >= 10);
 
-    let systemPrompt = 'Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask diverse strategic questions - mix gender, real/fictional, occupation, hobbies, relationships, appearance, time period, nationality, media presence, etc. Don\'t focus only on occupation. Questions should be varied and unique. Questions can vary in length naturally (like "Is your character a female?" or "Does your character personally know you?" or "Is your character linked with sports?"). The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves. When you have enough information (typically after 8-15 strategic questions), make a guess formatted as: "I think you are thinking of: [NAME]"';
+    // Check recent questions to encourage variety
+    const recentQuestions = session.conversationHistory
+      .filter(m => m.role === 'assistant')
+      .slice(-3)
+      .map(m => m.content.toLowerCase());
+    
+    // Detect if questions are too similar (e.g., all about acting/job)
+    const occupationKeywords = ['actor', 'act', 'movie', 'film', 'role', 'character', 'job', 'occupation', 'profession', 'work', 'career'];
+    const recentOccupationCount = recentQuestions.filter(q => 
+      occupationKeywords.some(keyword => q.includes(keyword))
+    ).length;
+    
+    let varietyInstruction = '';
+    if (recentOccupationCount >= 2) {
+      varietyInstruction = 'IMPORTANT: You just asked about occupation/acting multiple times. Switch to a COMPLETELY DIFFERENT topic now - ask about gender, real/fictional status, relationships, appearance, time period, nationality, hobbies, or media presence. Do NOT ask another occupation-related question.';
+    } else if (recentQuestions.length >= 2 && recentQuestions[recentQuestions.length - 1] === recentQuestions[recentQuestions.length - 2]) {
+      varietyInstruction = 'IMPORTANT: Switch to a different type of question. Vary your questions - don\'t repeat the same topic.';
+    }
+    
+    let systemPrompt = 'Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. ' + varietyInstruction + ' Ask diverse strategic questions - actively switch between different categories: gender, real/fictional status, occupation, hobbies, relationships, appearance, time period, nationality, media presence, etc. NEVER ask multiple questions in a row about the same topic (e.g., don\'t ask 3 acting/job questions in a row). Questions should be varied and unique. Questions can vary in length naturally (like "Is your character a female?" or "Does your character personally know you?" or "Is your character linked with sports?"). The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves. When you have enough information (typically after 8-15 strategic questions), make a guess formatted as: "I think you are thinking of: [NAME]"';
     
     if (shouldEncourageGuess) {
       systemPrompt = 'You have asked enough questions. Make your guess now based on the information gathered. Be confident - if clues match a well-known person (like Donald Trump, Barack Obama, Albert Einstein, Taylor Swift, etc.), guess them. Format as: "I think you are thinking of: [NAME]". If you are truly unsure, ask ONE more strategic question. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO greetings. NO reactions. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves.';
