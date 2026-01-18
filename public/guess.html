@@ -8,25 +8,40 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
-<body>
+<body class="guess-screen-active">
     <main>
         <div id="guess-screen" class="screen active">
-            <div class="guess-container">
-                <h2>I think you are thinking of:</h2>
-                <div class="guess-image-container" id="guess-image-container" style="display: none;">
-                    <img id="guess-image" src="" alt="Guess" class="guess-image">
+            <div class="game-layout">
+                <div class="game-content">
+                    <div class="speech-bubble guess-speech-bubble">
+                        <h2 class="guess-title">I think you are thinking of:</h2>
+                        <div class="guess-image-container" id="guess-image-container" style="display: none;">
+                            <img id="guess-image" src="" alt="Guess" class="guess-image">
+                        </div>
+                        <div class="guess-text" id="guess-text"></div>
+                        <div class="guess-description" id="guess-description"></div>
+                    </div>
+                    <div class="guess-buttons">
+                        <button class="btn btn-success" id="correct-btn">Yes, that's correct!</button>
+                        <button class="btn btn-danger" id="wrong-btn">No, that's wrong</button>
+                        <button class="btn btn-primary" id="continue-btn">Continue questioning</button>
+                    </div>
+                    <div id="wrong-input" style="display: none; margin-top: 20px;">
+                        <input type="text" id="actual-answer" placeholder="Who were you thinking of?" class="input-text">
+                        <button class="btn btn-primary" id="submit-answer-btn">Submit</button>
+                    </div>
                 </div>
-                <div class="guess-text" id="guess-text"></div>
-                <div class="guess-description" id="guess-description"></div>
-                <div class="guess-buttons">
-                    <button class="btn btn-success" id="correct-btn">Yes, that's correct!</button>
-                    <button class="btn btn-danger" id="wrong-btn">No, that's wrong</button>
-                    <button class="btn btn-primary" id="continue-btn">Continue questioning</button>
-                </div>
-                <div id="wrong-input" style="display: none; margin-top: 20px;">
-                    <input type="text" id="actual-answer" placeholder="Who were you thinking of?" class="input-text">
-                    <button class="btn btn-primary" id="submit-answer-btn">Submit</button>
+                <div class="model-container">
+                    <canvas id="noema3d-canvas-guess"></canvas>
                 </div>
             </div>
         </div>

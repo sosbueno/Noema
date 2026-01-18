@@ -569,33 +569,54 @@ body.guess-screen-active .landingimage {
 
 .guess-description {
     font-size: 1rem;
-    color: rgba(255, 255, 255, 0.85);
-    margin: 10px 0 20px 0;
+    color: #2c2c2c;
+    margin: 12px 0;
     font-style: italic;
     line-height: 1.4;
 }
 
 .guess-text {
-    background: rgba(255, 245, 240, 0.8);
-    border: 2px solid #ff6b35;
-    border-radius: 4px;
-    padding: 16px;
-    font-size: 22px;
-    font-weight: 600;
-    color: #fff5f0;
-    margin-bottom: 16px;
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c2c2c;
+    margin: 12px 0;
+    min-height: auto;
+    display: block;
+    text-align: center;
     font-family: 'VT323', monospace;
+}
+
+.guess-speech-bubble {
+    width: 100%;
+    max-width: 500px;
+}
+
+.guess-speech-bubble .guess-title {
+    color: #ff6b35;
+    font-size: 18px;
+    margin-bottom: 12px;
+    font-family: 'Press Start 2P', monospace;
+    line-height: 1.5;
 }
 
 .guess-buttons {
     display: flex;
-    gap: 8px;
-    justify-content: center;
+    gap: 12px;
+    justify-content: flex-start;
     flex-wrap: wrap;
+    width: 100%;
+    max-width: 500px;
+    margin-top: 10px;
+}
+
+#noema3d-canvas-guess {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .end-message {
