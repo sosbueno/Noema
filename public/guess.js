@@ -106,33 +106,15 @@ if (guessData.guessName) {
 
 // Handle continue questioning
 async function handleContinue() {
-    let targetPath = '/index.html';
-    const currentPath = window.location.pathname;
-    if (currentPath.includes('guess.html')) {
-        targetPath = currentPath.replace('guess.html', 'index.html');
-    } else {
-        targetPath = '/index.html';
-    }
-    const targetUrl = window.location.origin + targetPath;
+    const targetUrl = window.location.origin + '/index.html';
     console.log('Redirecting from', window.location.href, 'to:', targetUrl);
     window.location.href = targetUrl;
 }
 
 // Handle guess result
 async function handleGuessResult(correct) {
-    const getRedirectUrl = () => {
-        let targetPath = '/index.html';
-        const currentPath = window.location.pathname;
-        if (currentPath.includes('guess.html')) {
-            targetPath = currentPath.replace('guess.html', 'index.html');
-        } else {
-            targetPath = '/index.html';
-        }
-        return window.location.origin + targetPath;
-    };
-
     if (!sessionId) {
-        const targetUrl = getRedirectUrl();
+        const targetUrl = window.location.origin + '/index.html';
         window.location.href = targetUrl;
         return;
     }
@@ -150,7 +132,7 @@ async function handleGuessResult(correct) {
         });
 
         if (response.ok) {
-            const targetUrl = getRedirectUrl();
+            const targetUrl = window.location.origin + '/index.html';
             console.log('Redirecting from', window.location.href, 'to:', targetUrl);
             window.location.href = targetUrl;
         }
@@ -184,14 +166,7 @@ async function submitActualAnswer() {
     });
 
     if (response.ok) {
-        let targetPath = '/index.html';
-        const currentPath = window.location.pathname;
-        if (currentPath.includes('guess.html')) {
-            targetPath = currentPath.replace('guess.html', 'index.html');
-        } else {
-            targetPath = '/index.html';
-        }
-        const targetUrl = window.location.origin + targetPath;
+        const targetUrl = window.location.origin + '/index.html';
         console.log('Redirecting from', window.location.href, 'to:', targetUrl);
         window.location.href = targetUrl;
     }

@@ -241,8 +241,11 @@ body.guess-screen-active .landingimage {
 
 /* Guess page - more spacing and centered alignment */
 body.guess-screen-active .game-layout {
-    gap: 60px;
+    gap: 80px;
     align-items: center;
+    justify-content: flex-start;
+    padding-left: 60px;
+    padding-right: 60px;
 }
 
 .model-container {
@@ -255,9 +258,11 @@ body.guess-screen-active .game-layout {
     justify-content: center;
 }
 
-/* Guess page - model on left */
+/* Guess page - model on FAR LEFT */
 body.guess-screen-active .model-container {
     order: 1;
+    margin-left: 0;
+    margin-right: auto;
 }
 
 body.guess-screen-active .game-content {

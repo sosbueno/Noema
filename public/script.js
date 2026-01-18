@@ -448,12 +448,7 @@ async function submitAnswer(answer) {
             }));
             
             // Redirect to guess page immediately - use absolute path
-            const currentPath = window.location.pathname;
-            let basePath = '/';
-            if (currentPath.includes('/')) {
-                basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
-            }
-            const targetUrl = window.location.origin + basePath + 'guess.html';
+            const targetUrl = window.location.origin + '/guess.html';
             console.log('Redirecting from', window.location.href, 'to:', targetUrl);
             window.location.href = targetUrl;
             return; // Exit early to prevent any other code from running
