@@ -50,6 +50,49 @@ function extractGuessName(text) {
   return nameWords.join(' ') || null;
 }
 
+// Clean AI response - remove markdown, emojis, extra text
+function cleanResponse(text) {
+  if (!text) return text;
+  
+  // Check if it's a guess first - preserve guess format
+  const isGuess = text.toLowerCase().includes('i think you are thinking of') || 
+                  text.toLowerCase().includes('are you thinking of') ||
+                  text.toLowerCase().includes('you are thinking of');
+  
+  // Remove markdown bold/italic
+  text = text.replace(/\*\*([^*]+)\*\*/g, '$1'); // **bold** -> bold
+  text = text.replace(/\*([^*]+)\*/g, '$1'); // *italic* -> italic
+  text = text.replace(/__([^_]+)__/g, '$1'); // __bold__ -> bold
+  text = text.replace(/_([^_]+)_/g, '$1'); // _italic_ -> italic
+  
+  // Remove emojis (basic pattern)
+  text = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, ''); // Emoji ranges
+  text = text.replace(/[\u{2600}-\u{26FF}]/gu, ''); // Miscellaneous symbols
+  text = text.replace(/[\u{2700}-\u{27BF}]/gu, ''); // Dingbats
+  
+  // Remove common greeting/exclamation patterns at start (only for questions)
+  if (!isGuess) {
+    text = text.replace(/^(Great!|Awesome!|Perfect!|Okay!|Let's play!|Alright!|Great|Awesome|Perfect|Okay|Alright)[\s!:\s]*/i, '');
+    // Remove parenthetical explanations at end (e.g., "(as opposed to...)")
+    text = text.replace(/\s*\([^)]*\)\s*$/g, '');
+  }
+  
+  // Trim and ensure single spaces
+  text = text.trim().replace(/\s+/g, ' ');
+  
+  // If it's a guess, return as-is
+  if (isGuess) {
+    return text;
+  }
+  
+  // For questions, ensure they end with a question mark
+  if (text && !text.endsWith('?') && !text.includes(':')) {
+    text = text + '?';
+  }
+  
+  return text;
+}
+
 // Get image URL from Wikipedia
 async function getImageForGuess(name) {
   try {
@@ -89,7 +132,7 @@ app.get('/api/game/image/:name', async (req, res) => {
 app.post('/api/game/start', async (req, res) => {
   try {
     const sessionId = Date.now().toString();
-    const systemPrompt = 'You are playing Akinator. Ask ONLY short yes/no questions. Maximum 8 words per question. NO emojis. NO punctuation except question mark. NO reactions. NO explanations. Just ask the question. Example: "Is this person real" or "Are they male" or "Do they act". After 8 questions, guess. Format guess as: "I think you are thinking of: [NAME]".';
+    const systemPrompt = 'You are playing Akinator. Your response must be ONLY a question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Just ask a short yes/no question (maximum 8 words). Start directly with the question. Examples: "Is this person real" or "Are they male" or "Do they act in movies". After 8 questions, make a guess formatted as: "I think you are thinking of: [NAME]"';
     
     const conversationHistory = [{
       role: 'user',
@@ -103,7 +146,7 @@ app.post('/api/game/start', async (req, res) => {
       messages: conversationHistory
     });
 
-    const firstQuestion = message.content[0].text;
+    const firstQuestion = cleanResponse(message.content[0].text);
     conversationHistory.push({
       role: 'assistant',
       content: firstQuestion
@@ -157,10 +200,10 @@ app.post('/api/game/answer', async (req, res) => {
     const shouldGuess = (questionCount >= 8 && confidence > 0.5) || 
                        (questionCount >= 10 && questionCount % 2 === 0);
 
-    let systemPrompt = 'Ask ONLY short yes/no questions. Maximum 8 words. NO emojis. NO punctuation except question mark. NO reactions. NO explanations. Just the question. Example: "Is this person real" or "Are they male". After 8 questions total, guess. Format guess as: "I think you are thinking of: [NAME]".';
+    let systemPrompt = 'Your response must be ONLY a question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Just ask a short yes/no question (maximum 8 words). Start directly with the question. Examples: "Is this person real" or "Are they male" or "Do they act in movies". After 8 questions total, make a guess formatted as: "I think you are thinking of: [NAME]"';
     
     if (shouldGuess) {
-      systemPrompt = 'Make your guess now. Format as: "I think you are thinking of: [NAME]". NO emojis. NO extra text. Just the guess.';
+      systemPrompt = 'Make your guess now. Format as: "I think you are thinking of: [NAME]". NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO greetings. NO reactions. Just the guess.';
     }
 
     const message = await anthropic.messages.create({
@@ -170,7 +213,7 @@ app.post('/api/game/answer', async (req, res) => {
       messages: session.conversationHistory
     });
 
-    const response = message.content[0].text;
+    const response = cleanResponse(message.content[0].text);
     session.conversationHistory.push({
       role: 'assistant',
       content: response
@@ -236,11 +279,11 @@ app.post('/api/game/guess-result', async (req, res) => {
       const message = await anthropic.messages.create({
         model: 'claude-opus-4-5-20251101',
         max_tokens: 50,
-        system: 'Your guess was wrong. Ask ONLY short yes/no questions. Maximum 8 words. NO emojis. NO punctuation except question mark. NO reactions. Ask 3-5 more questions then guess again. Format guess as: "I think you are thinking of: [NAME]".',
+        system: 'Your guess was wrong. Your response must be ONLY a question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. Just ask a short yes/no question (maximum 8 words). Start directly with the question. Ask 3-5 more questions then guess again. Format guess as: "I think you are thinking of: [NAME]"',
         messages: session.conversationHistory
       });
 
-      const nextQuestion = message.content[0].text;
+      const nextQuestion = cleanResponse(message.content[0].text);
       session.conversationHistory.push({
         role: 'assistant',
         content: nextQuestion
