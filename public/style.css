@@ -81,7 +81,7 @@ body {
 /* Game screen uses wider layout */
 body.game-screen-active {
     width: 100%;
-    max-width: 900px;
+    max-width: 1000px;
 }
 
 a {
@@ -223,21 +223,23 @@ body.guess-screen-active .landingimage {
     display: none;
 }
 
-/* Game screen layout - model on left, content on right */
+/* Game screen layout - content on left, model on right */
 .game-layout {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
-    gap: 30px;
-    max-width: 900px;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    max-width: 1000px;
     width: 100%;
-    margin: 20px auto;
-    padding: 20px;
+    margin: 40px auto;
+    padding: 30px 20px;
     min-height: 400px;
 }
 
 .model-container {
     flex: 0 0 auto;
+    order: 2;
     width: 300px;
     height: 350px;
     display: flex;
@@ -255,44 +257,49 @@ body.guess-screen-active .landingimage {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 25px;
+    align-items: flex-start;
     min-width: 0;
+    max-width: 500px;
 }
 
-/* Speech bubble */
+/* Speech bubble - pointing right towards model */
 .speech-bubble {
     position: relative;
     background: rgba(255, 245, 240, 0.95);
     border: 2px solid #ff6b35;
     border-radius: 12px;
-    padding: 16px 20px;
-    margin-left: 20px;
-    max-width: 400px;
+    padding: 18px 24px;
+    margin: 0;
+    width: auto;
+    min-width: 300px;
+    max-width: 500px;
     box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+    align-self: flex-start;
 }
 
 .speech-bubble::before {
     content: '';
     position: absolute;
-    left: -20px;
+    right: -20px;
     top: 30px;
     width: 0;
     height: 0;
     border-top: 15px solid transparent;
     border-bottom: 15px solid transparent;
-    border-right: 20px solid #ff6b35;
+    border-left: 20px solid #ff6b35;
 }
 
 .speech-bubble::after {
     content: '';
     position: absolute;
-    left: -16px;
+    right: -16px;
     top: 32px;
     width: 0;
     height: 0;
     border-top: 13px solid transparent;
     border-bottom: 13px solid transparent;
-    border-right: 16px solid rgba(255, 245, 240, 0.95);
+    border-left: 16px solid rgba(255, 245, 240, 0.95);
 }
 
 .speech-bubble .question-number {
@@ -307,11 +314,13 @@ body.guess-screen-active .landingimage {
 
 .speech-bubble .question-text {
     color: #2c2c2c;
-    font-size: 20px;
+    font-size: 22px;
     line-height: 1.6;
     font-weight: 600;
     font-family: 'VT323', monospace;
     text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+    word-wrap: break-word;
+    white-space: normal;
 }
 
 .welcome-message {
@@ -446,7 +455,9 @@ body.guess-screen-active .landingimage {
 /* Answer buttons on game screen */
 #game-screen .answer-buttons {
     margin: 0;
-    margin-left: 20px;
+    width: 100%;
+    max-width: 500px;
+    justify-self: flex-start;
 }
 
 .btn-answer {
