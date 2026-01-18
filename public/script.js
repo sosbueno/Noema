@@ -257,7 +257,6 @@ const guessScreen = document.getElementById('guess-screen');
 const endScreen = document.getElementById('end-screen');
 const startBtn = document.getElementById('start-btn');
 const questionText = document.getElementById('question-text');
-const questionNumber = document.getElementById('question-number');
 const answerButtons = document.querySelectorAll('.btn-answer');
 const loading = document.getElementById('loading');
 const progressFill = document.getElementById('progress-fill');
@@ -370,7 +369,6 @@ async function startGame() {
         sessionId = data.sessionId;
         currentQuestionCount = 1;
         lastQuestion = data.question;
-        questionNumber.textContent = `Question ${currentQuestionCount}`;
         questionText.textContent = data.question;
         updateProgress(0);
         loading.style.display = 'none';
@@ -407,7 +405,6 @@ async function submitAnswer(answer) {
 
         const data = await response.json();
         currentQuestionCount = data.questionCount;
-        questionNumber.textContent = `Question ${currentQuestionCount}`;
         
         // Update progress bar
         if (data.progress !== undefined) {
@@ -493,7 +490,6 @@ async function handleContinue() {
 
         const data = await response.json();
         currentQuestionCount = data.questionCount;
-        questionNumber.textContent = `Question ${currentQuestionCount}`;
         lastQuestion = data.question;
         
         // Update progress
@@ -588,7 +584,6 @@ async function submitActualAnswer() {
         if (data.continue) {
             // Continue with more questions
             currentQuestionCount++;
-            questionNumber.textContent = `Question ${currentQuestionCount}`;
             questionText.textContent = data.question;
             // Update progress (slightly decrease since wrong guess)
             const maxQuestions = 25;
