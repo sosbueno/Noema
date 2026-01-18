@@ -183,6 +183,12 @@ header a h1 {
     max-width: 100%;
 }
 
+/* Game screen uses wider layout */
+#game-screen.active .game-area {
+    width: 100%;
+    max-width: 900px;
+}
+
 .screen {
     display: none;
 }
@@ -200,10 +206,105 @@ body:has(#guess-screen.active) .landingimage {
     display: none;
 }
 
-/* Alternative approach - use JavaScript to add class */
+/* Hide header and landing image on game screen */
+body.game-screen-active header,
+body.game-screen-active .landingimage {
+    display: none;
+}
+
 body.guess-screen-active header,
 body.guess-screen-active .landingimage {
     display: none;
+}
+
+/* Game screen layout - model on left, content on right */
+.game-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.model-container {
+    flex: 0 0 auto;
+    width: 300px;
+    height: 350px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#noema3d-canvas-game {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.game-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+}
+
+/* Speech bubble */
+.speech-bubble {
+    position: relative;
+    background: rgba(255, 245, 240, 0.95);
+    border: 2px solid #ff6b35;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-left: 20px;
+    max-width: 400px;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.speech-bubble::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 30px;
+    width: 0;
+    height: 0;
+    border-top: 15px solid transparent;
+    border-bottom: 15px solid transparent;
+    border-right: 20px solid #ff6b35;
+}
+
+.speech-bubble::after {
+    content: '';
+    position: absolute;
+    left: -16px;
+    top: 32px;
+    width: 0;
+    height: 0;
+    border-top: 13px solid transparent;
+    border-bottom: 13px solid transparent;
+    border-right: 16px solid rgba(255, 245, 240, 0.95);
+}
+
+.speech-bubble .question-number {
+    color: #ff6b35;
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'VT323', monospace;
+}
+
+.speech-bubble .question-text {
+    color: #2c2c2c;
+    font-size: 20px;
+    line-height: 1.6;
+    font-weight: 600;
+    font-family: 'VT323', monospace;
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 .welcome-message {
@@ -239,6 +340,11 @@ body.guess-screen-active .landingimage {
     width: 400px;
     max-width: 100%;
     text-align: center;
+}
+
+/* Hide progress on game screen */
+#game-screen .progress-container {
+    display: none;
 }
 
 .progress-label {
@@ -328,6 +434,12 @@ body.guess-screen-active .landingimage {
     width: 400px;
     max-width: 100%;
     justify-items: center;
+}
+
+/* Answer buttons on game screen */
+#game-screen .answer-buttons {
+    margin: 0;
+    margin-left: 20px;
 }
 
 .btn-answer {

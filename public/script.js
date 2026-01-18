@@ -271,11 +271,16 @@ function showScreen(screen) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     screen.classList.add('active');
     
-    // Hide header and 3D logo on guess screen
+    // Hide header and 3D logo on guess screen and game screen
     if (screen.id === 'guess-screen') {
         document.body.classList.add('guess-screen-active');
+        document.body.classList.remove('game-screen-active');
+    } else if (screen.id === 'game-screen') {
+        document.body.classList.add('game-screen-active');
+        document.body.classList.remove('guess-screen-active');
     } else {
         document.body.classList.remove('guess-screen-active');
+        document.body.classList.remove('game-screen-active');
     }
 }
 
