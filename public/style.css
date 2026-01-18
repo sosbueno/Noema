@@ -255,6 +255,15 @@ body.guess-screen-active .game-layout {
     justify-content: center;
 }
 
+/* Guess page - model on left */
+body.guess-screen-active .model-container {
+    order: 1;
+}
+
+body.guess-screen-active .game-content {
+    order: 2;
+}
+
 #noema3d-canvas-game {
     width: 100%;
     height: 100%;
@@ -272,7 +281,7 @@ body.guess-screen-active .game-layout {
     width: 100%;
 }
 
-/* Speech bubble - pointing right towards model */
+/* Speech bubble - pointing right towards model (for game screen) */
 .speech-bubble {
     position: relative;
     background: rgba(255, 245, 240, 0.95);
@@ -309,6 +318,21 @@ body.guess-screen-active .game-layout {
     border-top: 13px solid transparent;
     border-bottom: 13px solid transparent;
     border-left: 16px solid rgba(255, 245, 240, 0.95);
+}
+
+/* Guess page - speech bubble pointing left towards model on left */
+body.guess-screen-active .speech-bubble::before {
+    right: auto;
+    left: -20px;
+    border-left: none;
+    border-right: 20px solid #ff6b35;
+}
+
+body.guess-screen-active .speech-bubble::after {
+    right: auto;
+    left: -16px;
+    border-left: none;
+    border-right: 16px solid rgba(255, 245, 240, 0.95);
 }
 
 .speech-bubble .question-number {

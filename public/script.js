@@ -448,8 +448,14 @@ async function submitAnswer(answer) {
             }));
             
             // Redirect to guess page immediately - use absolute path
-            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-            window.location.href = basePath + 'guess.html';
+            const currentPath = window.location.pathname;
+            let basePath = '/';
+            if (currentPath.includes('/')) {
+                basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+            }
+            const targetUrl = window.location.origin + basePath + 'guess.html';
+            console.log('Redirecting from', window.location.href, 'to:', targetUrl);
+            window.location.href = targetUrl;
             return; // Exit early to prevent any other code from running
         } else {
             lastQuestion = data.question;
