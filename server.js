@@ -132,16 +132,16 @@ app.get('/api/game/image/:name', async (req, res) => {
 app.post('/api/game/start', async (req, res) => {
   try {
     const sessionId = Date.now().toString();
-    const systemPrompt = 'You are playing Akinator. Your response must be ONLY a question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Just ask a short yes/no question (maximum 8 words). Start directly with the question. Examples: "Is this person real" or "Are they male" or "Do they act in movies". After 8 questions, make a guess formatted as: "I think you are thinking of: [NAME]"';
+    const systemPrompt = 'You are playing Akinator. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask strategic questions that eliminate as many people as possible. Questions can vary in length (like "Is your character a female?" or "Does your character personally know you?"). Start directly with the question. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, or even the player themselves. After asking enough strategic questions (8-15 questions), make a guess formatted as: "I think you are thinking of: [NAME]"';
     
     const conversationHistory = [{
       role: 'user',
-      content: 'Start'
+      content: 'Start the game. Ask your first question to eliminate as many people as possible.'
     }];
 
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5-20251101',
-      max_tokens: 50,
+      max_tokens: 100,
       system: systemPrompt,
       messages: conversationHistory
     });
@@ -195,20 +195,19 @@ app.post('/api/game/answer', async (req, res) => {
     const yesCount = recentAnswers.filter(a => a.includes('yes') || a.includes('probably')).length;
     const confidence = yesCount / Math.max(recentAnswers.length, 1);
 
-    // Determine if we should make a guess (after 8-12 questions for faster guessing)
+    // Determine if we should encourage a guess (after 8+ questions)
     const questionCount = session.conversationHistory.filter(m => m.role === 'assistant').length;
-    const shouldGuess = (questionCount >= 8 && confidence > 0.5) || 
-                       (questionCount >= 10 && questionCount % 2 === 0);
+    const shouldEncourageGuess = questionCount >= 8 && (confidence > 0.5 || questionCount >= 12);
 
-    let systemPrompt = 'Your response must be ONLY a question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Just ask a short yes/no question (maximum 8 words). Start directly with the question. Examples: "Is this person real" or "Are they male" or "Do they act in movies". After 8 questions total, make a guess formatted as: "I think you are thinking of: [NAME]"';
+    let systemPrompt = 'Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask strategic questions that narrow down possibilities. Questions can vary in length naturally (like "Is your character a female?" or "Does your character personally know you?" or "Is your character linked with sports?"). The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, or even the player themselves. When you have enough information (typically after 8-15 strategic questions), make a guess formatted as: "I think you are thinking of: [NAME]"';
     
-    if (shouldGuess) {
-      systemPrompt = 'Make your guess now. Format as: "I think you are thinking of: [NAME]". NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO greetings. NO reactions. Just the guess.';
+    if (shouldEncourageGuess) {
+      systemPrompt = 'You have asked enough questions. If you are confident, make your guess now. Format as: "I think you are thinking of: [NAME]". If you need more information, ask ONE more strategic question. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO greetings. NO reactions. The person could be ANYONE - real or fictional, famous or obscure, or even the player themselves.';
     }
 
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5-20251101',
-      max_tokens: 50,
+      max_tokens: 100,
       system: systemPrompt,
       messages: session.conversationHistory
     });
@@ -278,8 +277,8 @@ app.post('/api/game/guess-result', async (req, res) => {
       // Continue asking questions
       const message = await anthropic.messages.create({
         model: 'claude-opus-4-5-20251101',
-        max_tokens: 50,
-        system: 'Your guess was wrong. Your response must be ONLY a question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. Just ask a short yes/no question (maximum 8 words). Start directly with the question. Ask 3-5 more questions then guess again. Format guess as: "I think you are thinking of: [NAME]"',
+        max_tokens: 100,
+        system: 'Your guess was wrong. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. Ask strategic questions that narrow down possibilities (questions can vary in length naturally). The person could be ANYONE - real or fictional, famous or obscure, or even the player themselves. Ask 3-5 more strategic questions then guess again. Format guess as: "I think you are thinking of: [NAME]"',
         messages: session.conversationHistory
       });
 
