@@ -78,11 +78,13 @@ body {
     box-sizing: border-box;
 }
 
-/* Game screen uses wider layout */
-body.game-screen-active {
+/* Game screen and guess screen use wider layout */
+body.game-screen-active,
+body.guess-screen-active {
     width: 100%;
     max-width: 1000px;
 }
+
 
 a {
     transition: all 200ms ease;
@@ -227,21 +229,27 @@ body.guess-screen-active .landingimage {
 .game-layout {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    gap: 40px;
-    max-width: 1000px;
+    gap: 50px;
+    max-width: 1100px;
     width: 100%;
-    margin: 40px auto;
-    padding: 30px 20px;
-    min-height: 400px;
+    margin: 50px auto;
+    padding: 40px 30px;
+    min-height: 450px;
+}
+
+/* Guess page - more spacing and centered alignment */
+body.guess-screen-active .game-layout {
+    gap: 60px;
+    align-items: center;
 }
 
 .model-container {
     flex: 0 0 auto;
     order: 2;
-    width: 300px;
-    height: 350px;
+    width: 320px;
+    height: 380px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -254,13 +262,14 @@ body.guess-screen-active .landingimage {
 }
 
 .game-content {
-    flex: 1;
+    flex: 0 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 25px;
+    gap: 30px;
     align-items: flex-start;
     min-width: 0;
-    max-width: 500px;
+    max-width: 550px;
+    width: 100%;
 }
 
 /* Speech bubble - pointing right towards model */

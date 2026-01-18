@@ -447,8 +447,9 @@ async function submitAnswer(answer) {
                 questionCount: currentQuestionCount
             }));
             
-            // Redirect to guess page immediately
-            window.location.href = 'guess.html';
+            // Redirect to guess page immediately - use absolute path
+            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+            window.location.href = basePath + 'guess.html';
             return; // Exit early to prevent any other code from running
         } else {
             lastQuestion = data.question;
