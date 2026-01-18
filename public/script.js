@@ -227,18 +227,20 @@ function animate3D() {
     }
 }
 
-// Initialize 3D model when page loads - for landing page canvas
+// Initialize 3D model when page loads - only for existing canvases
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        init3DModel('noema3d-canvas');
-        init3DModel('noema3d-canvas-game');
+        // Initialize landing page canvas if it exists
+        const landingCanvas = document.getElementById('noema3d-canvas');
+        if (landingCanvas) {
+            init3DModel('noema3d-canvas');
+        }
     });
 } else {
-    init3DModel('noema3d-canvas');
-    // Initialize game canvas only if it exists (on game screen)
-    const gameCanvas = document.getElementById('noema3d-canvas-game');
-    if (gameCanvas) {
-        init3DModel('noema3d-canvas-game');
+    // Initialize landing page canvas if it exists
+    const landingCanvas = document.getElementById('noema3d-canvas');
+    if (landingCanvas) {
+        init3DModel('noema3d-canvas');
     }
 }
 
