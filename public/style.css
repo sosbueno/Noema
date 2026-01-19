@@ -229,7 +229,7 @@ body.guess-screen-active .landingimage {
 .game-layout {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: flex-start; /* Changed from center to allow vertical separation */
     justify-content: center;
     gap: 50px;
     max-width: 1200px;
@@ -239,64 +239,53 @@ body.guess-screen-active .landingimage {
     min-height: 450px;
 }
 
-/* Guess page - CENTERED alignment */
-body.guess-screen-active .game-layout {
-    gap: 80px;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 60px;
-    position: relative !important;
-    margin: 50px auto;
-    max-width: 1200px;
-    width: 100%;
+/* Game screen and Guess screen - centered like home page */
+body.guess-screen-active #game-screen .game-layout {
+    /* Use default centered layout - same as home page */
+}
+
+/* COMPLETE RESTRUCTURE FOR GUESS SCREEN */
+body.guess-screen-active #guess-screen .game-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0 !important;
+    padding: 20px !important;
+    margin: 0 auto !important;
+    max-width: 1200px !important;
+    width: 100% !important;
 }
 
 .model-container {
     flex: 0 0 auto;
-    order: 1;
+    order: 2;
     width: 320px;
     height: 380px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 0;
-    margin-right: auto;
+    margin: 0;
+    margin-top: -40px; /* Move model up */
 }
 
-/* Guess page - model container (centered) */
+/* Game screen model container */
+body.guess-screen-active #game-screen .model-container {
+    /* Use default flexbox positioning - centered */
+}
+
+/* Guess screen model container - at the top */
 body.guess-screen-active #guess-screen .model-container {
-    width: 320px;
-    height: 380px;
+    order: 1 !important;
+    margin: 0 auto 0 auto !important;
+    margin-top: 20px !important;
+    z-index: 10;
     position: relative;
-    margin: 0;
-    padding: 0;
 }
 
-/* Game screen - content on right */
+/* Game screen - content on left, model on right (matching home page) */
 .game-content {
-    order: 2;
-}
-
-/* Guess page - model container (centered) */
-body.guess-screen-active .model-container {
     order: 1;
-    margin: 0;
-    padding: 0;
-    flex-shrink: 0;
-    position: relative;
-}
-
-body.guess-screen-active .game-content {
-    order: 2;
-}
-
-#noema3d-canvas-game {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.game-content {
     flex: 0 1 auto;
     display: flex;
     flex-direction: column;
@@ -305,7 +294,37 @@ body.guess-screen-active .game-content {
     min-width: 0;
     max-width: 550px;
     width: 100%;
-    order: 2;
+    margin-top: 40px; /* Move content down */
+}
+
+/* Remove duplicate rule - handled above */
+
+body.guess-screen-active #game-screen .game-content {
+    /* Use default centered layout */
+    align-items: center;
+    text-align: center;
+}
+
+/* Guess screen content - pushed way down */
+body.guess-screen-active #guess-screen .game-content {
+    order: 2 !important;
+    margin-top: 200px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-top: 0 !important;
+    width: 100% !important;
+    max-width: 550px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 30px !important;
+}
+
+#noema3d-canvas-game {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 /* Speech bubble - pointing right towards model (for game screen) */
@@ -529,10 +548,11 @@ body.guess-screen-active .speech-bubble::after {
 
 /* Answer buttons on game screen */
 #game-screen .answer-buttons {
-    margin: 0;
+    margin: 20px 0 0 0;
     width: 100%;
     max-width: 500px;
     justify-self: flex-start;
+    gap: 12px;
 }
 
 .btn-answer {
@@ -668,6 +688,14 @@ body.guess-screen-active .speech-bubble::after {
 .guess-speech-bubble {
     width: 100%;
     max-width: 500px;
+    margin-bottom: 30px;
+}
+
+/* Guess screen speech bubble */
+body.guess-screen-active #guess-screen .guess-speech-bubble {
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 500px !important;
 }
 
 .guess-speech-bubble .guess-title {
@@ -680,12 +708,20 @@ body.guess-screen-active .speech-bubble::after {
 
 .guess-buttons {
     display: flex;
-    gap: 12px;
+    gap: 15px;
     justify-content: flex-start;
     flex-wrap: wrap;
     width: 100%;
     max-width: 500px;
-    margin-top: 10px;
+    margin-top: 30px;
+    margin-bottom: 20px;
+}
+
+/* Guess screen buttons - centered */
+body.guess-screen-active #guess-screen .guess-buttons {
+    justify-content: center !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
 
 #noema3d-canvas-guess {

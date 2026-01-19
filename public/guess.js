@@ -46,6 +46,14 @@ let currentRotationXGuess = 0;
 const rotationSensitivityGuess = 0.002;
 const rotationSmoothingGuess = 0.1;
 
+// 3D Model variables for game screen (questions page)
+let scene3DGame, camera3DGame, renderer3DGame, model3DGame;
+let targetRotationYGame = 0;
+let targetRotationXGame = 0;
+let currentRotationYGame = 0;
+let currentRotationXGame = 0;
+const rotationSmoothingGame = 0.1;
+
 // Copy full 3D model initialization code from home page (with glow and all lighting)
 async function initGuessPage3DModel() {
     try {
@@ -226,6 +234,23 @@ function animateGuess3D() {
     }
 }
 
+function animateGame3D() {
+    requestAnimationFrame(animateGame3D);
+    
+    if (model3DGame) {
+        currentRotationYGame += (targetRotationYGame - currentRotationYGame) * rotationSmoothingGame;
+        currentRotationXGame += (targetRotationXGame - currentRotationXGame) * rotationSmoothingGame;
+        
+        model3DGame.rotation.y = currentRotationYGame;
+        model3DGame.rotation.x = currentRotationXGame;
+        model3DGame.rotation.z = 0;
+    }
+    
+    if (renderer3DGame && scene3DGame && camera3DGame) {
+        renderer3DGame.render(scene3DGame, camera3DGame);
+    }
+}
+
 // Show a specific screen
 function showScreen(screen) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -240,62 +265,162 @@ function showScreen(screen) {
     }
 }
 
-// Initialize 3D model for game screen
+// Initialize 3D model for game screen (same as home page with cursor tracking and glow)
 async function initGamePage3DModel() {
     try {
-        const { Scene, PerspectiveCamera, WebGLRenderer, AmbientLight, DirectionalLight, HemisphereLight, Box3, Vector3 } = await import('three');
+        const { Scene, PerspectiveCamera, WebGLRenderer, AmbientLight, DirectionalLight, PointLight, HemisphereLight, Box3, Vector3 } = await import('three');
         const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
         
         const canvas = document.getElementById('noema3d-canvas-game');
         if (!canvas) return;
 
-        const scene3D = new Scene();
-        scene3D.background = null;
+        // Scene setup
+        scene3DGame = new Scene();
+        scene3DGame.background = null;
 
+        // Camera setup
         const width = 320;
         const height = 380;
-        const camera3D = new PerspectiveCamera(50, width / height, 0.1, 1000);
-        camera3D.position.set(0, 0, 3);
+        camera3DGame = new PerspectiveCamera(50, width / height, 0.1, 1000);
+        camera3DGame.position.set(0, 0, 3);
 
-        const renderer3D = new WebGLRenderer({ 
+        // Renderer setup
+        renderer3DGame = new WebGLRenderer({ 
             canvas: canvas, 
             alpha: true, 
             antialias: true 
         });
-        renderer3D.setSize(width, height);
-        renderer3D.setPixelRatio(window.devicePixelRatio);
+        renderer3DGame.setSize(width, height);
+        renderer3DGame.setPixelRatio(window.devicePixelRatio);
 
-        // Lighting
+        // Track mouse movement for rotation - anywhere on screen (same as home page)
+        const handleMouseMove = (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const deltaX = event.clientX - centerX;
+            const deltaY = event.clientY - centerY;
+            
+            const refDistance = 800;
+            targetRotationYGame = Math.atan2(deltaX, refDistance) * 0.3;
+            targetRotationXGame = Math.atan2(deltaY, refDistance) * 0.3;
+            
+            const threshold = 20;
+            if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+                targetRotationYGame = 0;
+                targetRotationXGame = 0;
+            }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+
+        // Enhanced lighting setup - same as home page
         const ambientLight = new AmbientLight(0xffffff, 1.5);
-        scene3D.add(ambientLight);
+        scene3DGame.add(ambientLight);
+
         const hemisphereLight = new HemisphereLight(0xffdd99, 0xaaaaff, 2.0);
-        scene3D.add(hemisphereLight);
+        scene3DGame.add(hemisphereLight);
+
         const mainLight = new DirectionalLight(0xffdd99, 3.5);
         mainLight.position.set(5, 5, 5);
-        scene3D.add(mainLight);
+        mainLight.castShadow = false;
+        scene3DGame.add(mainLight);
 
-        // Load model
+        const fillLight = new DirectionalLight(0xffcc99, 2.5);
+        fillLight.position.set(-5, 3, -5);
+        scene3DGame.add(fillLight);
+
+        const rimLight = new DirectionalLight(0xffffff, 2.0);
+        rimLight.position.set(0, -5, -5);
+        scene3DGame.add(rimLight);
+
+        const sideLight = new DirectionalLight(0xffaa66, 2.0);
+        sideLight.position.set(0, 0, 5);
+        scene3DGame.add(sideLight);
+
+        const pointLight1 = new PointLight(0xffdd99, 3.0, 20);
+        pointLight1.position.set(4, 4, 4);
+        scene3DGame.add(pointLight1);
+
+        const pointLight2 = new PointLight(0xffcc99, 2.5, 20);
+        pointLight2.position.set(-4, -4, -4);
+        scene3DGame.add(pointLight2);
+
+        const pointLight3 = new PointLight(0xffffff, 2.0, 18);
+        pointLight3.position.set(0, 5, 0);
+        scene3DGame.add(pointLight3);
+
+        const pointLight4 = new PointLight(0xffaa66, 1.8, 18);
+        pointLight4.position.set(5, 0, 0);
+        scene3DGame.add(pointLight4);
+
+        const pointLight5 = new PointLight(0xffaa66, 1.8, 18);
+        pointLight5.position.set(-5, 0, 0);
+        scene3DGame.add(pointLight5);
+
+        // Load GLB model
         const loader = new GLTFLoader();
         loader.load(
             'noema3d.glb',
             (gltf) => {
-                const model3D = gltf.scene;
-                const box = new Box3().setFromObject(model3D);
+                model3DGame = gltf.scene;
+                
+                // Make model materials reflective and brighter (same as home page)
+                model3DGame.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = false;
+                        child.receiveShadow = false;
+                        
+                        if (child.material) {
+                            const materials = Array.isArray(child.material) ? child.material : [child.material];
+                            
+                            materials.forEach((material) => {
+                                if (material.emissive !== undefined) {
+                                    material.emissive.setHex(0x664422);
+                                    material.emissiveIntensity = 0.15;
+                                }
+                                
+                                if (material.metalness !== undefined) {
+                                    material.metalness = 0.6;
+                                }
+                                if (material.roughness !== undefined) {
+                                    material.roughness = 0.3;
+                                }
+                                
+                                if (material.color) {
+                                    const currentColor = material.color.clone();
+                                    material.color = currentColor.multiplyScalar(1.3);
+                                }
+                                
+                                material.needsUpdate = true;
+                            });
+                            
+                            if (!Array.isArray(child.material)) {
+                                child.material = materials[0];
+                            }
+                        }
+                    }
+                });
+                
+                // Center and scale model
+                const box = new Box3().setFromObject(model3DGame);
                 const center = box.getCenter(new Vector3());
                 const size = box.getSize(new Vector3());
                 const maxDim = Math.max(size.x, size.y, size.z);
                 const scale = 2.0 / maxDim;
-                model3D.scale.multiplyScalar(scale);
-                model3D.position.sub(center.multiplyScalar(scale));
-                scene3D.add(model3D);
                 
-                function animate() {
-                    requestAnimationFrame(animate);
-                    renderer3D.render(scene3D, camera3D);
-                }
-                animate();
+                model3DGame.scale.multiplyScalar(scale);
+                model3DGame.position.sub(center.multiplyScalar(scale));
+                
+                scene3DGame.add(model3DGame);
+                animateGame3D();
             },
-            undefined,
+            (progress) => {
+                if (progress.lengthComputable) {
+                    console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
+                }
+            },
             (error) => console.error('Error loading 3D model:', error)
         );
     } catch (error) {
@@ -387,6 +512,9 @@ if (gameSession.sessionId && gameSession.question) {
     showScreen(gameScreen);
     questionText.textContent = gameSession.question;
     currentQuestionCount = gameSession.questionCount || 1;
+    if (questionNumber) {
+        questionNumber.textContent = `Question ${currentQuestionCount}`;
+    }
     
     // Initialize 3D model for game screen
     initGamePage3DModel();
@@ -394,6 +522,46 @@ if (gameSession.sessionId && gameSession.question) {
     // Set up answer button listeners
     answerButtons.forEach(btn => {
         btn.addEventListener('click', () => submitAnswer(btn.dataset.answer));
+    });
+} else if (!gameSession.sessionId && !guessData.guessName) {
+    // No session data yet - start game API call
+    showScreen(gameScreen);
+    loading.style.display = 'block';
+    
+    fetch(`${API_BASE}/game/start`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to start game');
+        }
+        return response.json();
+    }).then(data => {
+        sessionId = data.sessionId;
+        sessionStorage.setItem('gameSession', JSON.stringify({
+            sessionId: data.sessionId,
+            question: data.question,
+            questionCount: 1
+        }));
+        
+        questionText.textContent = data.question;
+        currentQuestionCount = 1;
+        if (questionNumber) {
+            questionNumber.textContent = `Question ${currentQuestionCount}`;
+        }
+        
+        loading.style.display = 'none';
+        initGamePage3DModel();
+        
+        answerButtons.forEach(btn => {
+            btn.addEventListener('click', () => submitAnswer(btn.dataset.answer));
+        });
+    }).catch(error => {
+        console.error('Error starting game:', error);
+        alert('Failed to start game. Please make sure the server is running.');
+        loading.style.display = 'none';
     });
 } else if (guessData.guessName) {
     // We have guess data - show guess screen

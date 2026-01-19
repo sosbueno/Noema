@@ -343,39 +343,34 @@ async function loadGuessImage(guessName, existingImageUrl = null) {
 
 // Start a new game
 async function startGame() {
-    try {
-        loading.style.display = 'block';
-        
-        const response = await fetch(`${API_BASE}/game/start`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to start game');
+    // Redirect IMMEDIATELY - don't wait for API call
+    const targetUrl = window.location.origin + '/guess.html';
+    console.log('Redirecting to game page immediately:', targetUrl);
+    
+    // Start API call in background but don't wait for it
+    fetch(`${API_BASE}/game/start`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
         }
-
-        const data = await response.json();
-        sessionId = data.sessionId;
-        
-        // Store session data and redirect to guess.html immediately
+    }).then(response => {
+        if (response.ok) {
+            return response.json();
+        }
+        throw new Error('Failed to start game');
+    }).then(data => {
+        // Store session data before redirect completes
         sessionStorage.setItem('gameSession', JSON.stringify({
-            sessionId: sessionId,
+            sessionId: data.sessionId,
             question: data.question,
             questionCount: 1
         }));
-        
-        // Redirect to guess.html immediately
-        const targetUrl = window.location.origin + '/guess.html';
-        console.log('Redirecting to game page:', targetUrl);
-        window.location.href = targetUrl;
-    } catch (error) {
+    }).catch(error => {
         console.error('Error starting game:', error);
-        alert('Failed to start game. Please make sure the server is running.');
-        loading.style.display = 'none';
-    }
+    });
+    
+    // Redirect immediately without waiting
+    window.location.href = targetUrl;
 }
 
 // Submit an answer
