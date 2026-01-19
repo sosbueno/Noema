@@ -454,6 +454,37 @@ body.guess-screen-active .speech-bubble::after {
     font-family: 'VT323', monospace;
 }
 
+.welcome-message .disclaimer {
+    margin: 20px 0;
+    padding: 16px;
+    background: rgba(255, 107, 53, 0.1);
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.welcome-message .disclaimer p {
+    color: #fff5f0;
+    font-size: 13px;
+    margin-bottom: 8px;
+    line-height: 1.6;
+    font-family: 'VT323', monospace;
+}
+
+.welcome-message .disclaimer p:first-child {
+    color: #ff6b35;
+    font-size: 12px;
+    margin-bottom: 10px;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.welcome-message .disclaimer-text {
+    color: #fff5f0;
+    font-size: 12px;
+    opacity: 0.85;
+}
+
 .progress-container {
     margin: 12px auto;
     padding: 14px 12px;
