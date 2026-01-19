@@ -194,11 +194,7 @@ async function init3DModel(canvasId = 'noema3d-canvas') {
                 scene3D.add(model3D);
                 animate3D();
             },
-            (progress) => {
-                if (progress.lengthComputable) {
-                    console.log('Loading progress:', (progress.loaded / progress.total * 100) + '%');
-                }
-            },
+            undefined, // No progress callback - load silently
             (error) => {
                 console.error('Error loading 3D model:', error);
             }
@@ -229,15 +225,21 @@ function animate3D() {
 
 // Initialize 3D model when page loads - only for existing canvases
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        // Initialize landing page canvas if it exists
-        const landingCanvas = document.getElementById('noema3d-canvas');
-        if (landingCanvas) {
-            init3DModel('noema3d-canvas');
-        }
-    });
+    // Initialize immediately - don't wait for DOMContentLoaded
+    const landingCanvas = document.getElementById('noema3d-canvas');
+    if (landingCanvas) {
+        init3DModel('noema3d-canvas');
+    } else {
+        // If canvas doesn't exist yet, wait for DOM but start loading immediately
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('noema3d-canvas');
+            if (canvas) {
+                init3DModel('noema3d-canvas');
+            }
+        });
+    }
 } else {
-    // Initialize landing page canvas if it exists
+    // Initialize landing page canvas if it exists - start immediately
     const landingCanvas = document.getElementById('noema3d-canvas');
     if (landingCanvas) {
         init3DModel('noema3d-canvas');

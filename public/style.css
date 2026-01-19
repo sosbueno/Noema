@@ -441,7 +441,7 @@ body.guess-screen-active .speech-bubble::after {
 
 .welcome-message {
     text-align: center;
-    margin-top: -10px;
+    margin-top: 20px;
     margin-bottom: 0;
     width: 400px;
     max-width: 100%;
@@ -868,22 +868,192 @@ body.guess-screen-active #guess-screen .guess-buttons {
     margin-top: 12px;
 }
 
-@media (max-width: 600px) {
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
     body {
-        width: 100%;
-        height: auto;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 10px !important;
+        padding-bottom: 60px !important;
+    }
+    
+    header {
+        padding: 10px 15px !important;
+    }
+    
+    header h1 {
+        font-size: 24px !important;
+    }
+    
+    header p {
+        font-size: 14px !important;
+    }
+    
+    .landingimage {
+        width: 280px !important;
+        height: 240px !important;
+        margin: 10px auto !important;
+    }
+    
+    .welcome-message {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 15px !important;
+        margin-top: 10px !important;
+    }
+    
+    .welcome-message h2 {
+        font-size: 16px !important;
+    }
+    
+    .welcome-message p {
+        font-size: 13px !important;
+    }
+    
+    .disclaimer {
+        margin: 15px 0 !important;
+        padding: 8px !important;
+    }
+    
+    .disclaimer p:first-child {
+        font-size: 16px !important;
+    }
+    
+    .disclaimer-text {
+        font-size: 11px !important;
+    }
+    
+    #start-btn {
+        font-size: 20px !important;
+        padding: 14px 24px !important;
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+    
+    .logs-link {
+        font-size: 20px !important;
+        padding: 14px 24px !important;
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+    
+    .copy-text {
+        font-size: 18px !important;
+        top: 10px !important;
+        right: 10px !important;
+    }
+    
+    .back-button {
+        top: 10px !important;
+        left: 10px !important;
+        padding: 10px 16px !important;
+        font-size: 16px !important;
+    }
+    
+    .game-layout {
+        flex-direction: column !important;
+        padding: 20px 15px !important;
+        gap: 20px !important;
+    }
+    
+    .model-container {
+        width: 100% !important;
+        max-width: 280px !important;
+        height: 240px !important;
+        margin: 0 auto !important;
+    }
+    
+    .game-content {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .speech-bubble {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 15px !important;
+    }
+    
+    .question-text {
+        font-size: 16px !important;
     }
     
     .answer-buttons {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+    
+    .btn-answer {
+        width: 100% !important;
+        font-size: 16px !important;
+        padding: 12px !important;
     }
     
     .guess-buttons {
-        flex-direction: column;
+        flex-direction: column !important;
+        width: 100% !important;
     }
     
-    .btn-answer, .btn {
-        width: 100%;
+    .btn {
+        width: 100% !important;
+        max-width: 100% !important;
+        font-size: 16px !important;
+        padding: 12px !important;
+    }
+    
+    .guess-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 15px !important;
+    }
+    
+    .guess-image {
+        max-width: 200px !important;
+        max-height: 200px !important;
+    }
+    
+    .guess-text {
+        font-size: 22px !important;
+    }
+    
+    .guess-description {
+        font-size: 14px !important;
+    }
+    
+    footer {
+        bottom: 10px !important;
+        gap: 15px !important;
+    }
+    
+    .social-link {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    
+    .social-link svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 20px !important;
+    }
+    
+    .landingimage {
+        width: 240px !important;
+        height: 200px !important;
+    }
+    
+    .welcome-message h2 {
+        font-size: 14px !important;
+    }
+    
+    #start-btn, .logs-link {
+        font-size: 18px !important;
+        padding: 12px 20px !important;
     }
 }
 
