@@ -473,10 +473,11 @@ body.guess-screen-active .speech-bubble::after {
 
 .welcome-message .disclaimer p:first-child {
     color: #ff6b35;
-    font-size: 12px;
+    font-size: 18px;
     margin-bottom: 10px;
     font-style: italic;
-    opacity: 0.9;
+    opacity: 1;
+    font-weight: bold;
 }
 
 .welcome-message .disclaimer-text {
@@ -862,4 +863,17 @@ body.guess-screen-active #guess-screen .guess-buttons {
     .btn-answer, .btn {
         width: 100%;
     }
+}
+
+/* Logs link */
+.logs-link {
+    color: #fff5f0;
+    text-decoration: none;
+    font-family: 'VT323', monospace;
+    font-size: 18px;
+    transition: text-decoration 200ms ease;
+}
+
+.logs-link:hover {
+    text-decoration: underline;
 }
