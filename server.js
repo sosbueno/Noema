@@ -99,139 +99,108 @@ function extractGuessName(text) {
 
 // Clean AI response - remove markdown, emojis, extra text
 function cleanResponse(text) {
-  if (!text) return text;
+  if (!text) return '';
   
-  // Remove markdown bold/italic
-  text = text.replace(/\*\*([^*]+)\*\*/g, '$1'); // **bold** -> bold
-  text = text.replace(/\*([^*]+)\*/g, '$1'); // *italic* -> italic
-  text = text.replace(/__([^_]+)__/g, '$1'); // __bold__ -> bold
-  text = text.replace(/_([^_]+)_/g, '$1'); // _italic_ -> italic
+  // Remove markdown formatting
+  text = text.replace(/\*\*(.*?)\*\*/g, '$1'); // Bold
+  text = text.replace(/\*(.*?)\*/g, '$1'); // Italic
+  text = text.replace(/`(.*?)`/g, '$1'); // Code
+  text = text.replace(/#{1,6}\s/g, ''); // Headers
   
-  // Remove emojis (basic pattern)
-  text = text.replace(/[\u{1F300}-\u{1F9FF}]/gu, ''); // Emoji ranges
-  text = text.replace(/[\u{2600}-\u{26FF}]/gu, ''); // Miscellaneous symbols
+  // Remove emojis
+  text = text.replace(/[\u{1F600}-\u{1F64F}]/gu, ''); // Emoticons
+  text = text.replace(/[\u{1F300}-\u{1F5FF}]/gu, ''); // Misc Symbols
+  text = text.replace(/[\u{1F680}-\u{1F6FF}]/gu, ''); // Transport
+  text = text.replace(/[\u{1F1E0}-\u{1F1FF}]/gu, ''); // Flags
+  text = text.replace(/[\u{2600}-\u{26FF}]/gu, ''); // Misc symbols
   text = text.replace(/[\u{2700}-\u{27BF}]/gu, ''); // Dingbats
   
-  // Check if it's a guess in question form like "Is your character Donald Trump?"
-  // Only match if it looks like a proper name (has capitalized words, not just descriptive words)
-  const questionGuessPattern = /^Is your character ([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\?$/;
-  const questionGuessMatch = text.match(questionGuessPattern);
-  if (questionGuessMatch) {
-    // Convert question-guess to statement-guess only if it looks like a name
-    const name = questionGuessMatch[1].trim();
-    // Additional check: make sure it's not a common descriptive word
-    const descriptiveWords = ['real', 'fictional', 'male', 'female', 'famous', 'alive', 'dead', 'american', 'english', 'old', 'young'];
-    if (!descriptiveWords.includes(name.toLowerCase())) {
-      text = `I think you are thinking of: ${name}`;
-    }
-  }
-  
-  // Check if it's a guess (statement format)
-  const isGuess = text.toLowerCase().includes('i think you are thinking of') || 
-                  text.toLowerCase().includes('are you thinking of') ||
-                  text.toLowerCase().includes('you are thinking of');
-  
-  // Remove common greeting/exclamation patterns at start (only for questions)
-  if (!isGuess) {
-    text = text.replace(/^(Great!|Awesome!|Perfect!|Okay!|Let's play!|Alright!|Great|Awesome|Perfect|Okay|Alright)[\s!:\s]*/i, '');
-    // Remove parenthetical explanations at end (e.g., "(as opposed to...)")
-    text = text.replace(/\s*\([^)]*\)\s*$/g, '');
-  }
-  
-  // Trim and ensure single spaces
+  // Remove extra whitespace
   text = text.trim().replace(/\s+/g, ' ');
-  
-  // If it's a guess, return as-is (statements, not questions)
-  if (isGuess) {
-    // Remove any trailing question marks from guesses
-    text = text.replace(/\s*\?+$/, '');
-    return text;
-  }
-  
-  // For questions, ensure they end with a question mark
-  if (text && !text.endsWith('?') && !text.includes(':')) {
-    text = text + '?';
-  }
   
   return text;
 }
 
 // Get image URL and description/occupation from Wikipedia
 async function getInfoForGuess(name) {
-  try {
-    const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`;
-    const response = await fetch(searchUrl);
-    if (response.ok) {
-      const data = await response.json();
-      
-      let imageUrl = null;
-      if (data.original && data.original.source) {
-        imageUrl = data.original.source;
-      } else if (data.thumbnail && data.thumbnail.source) {
-        imageUrl = data.thumbnail.source.replace('/thumb/', '/').split('/').slice(0, -1).join('/');
-      }
-      
-      // Extract short occupation/description - just the role/title like "45th and 47th U.S. President, Businessman"
-      let description = '';
-      
-      // First try Wikipedia description field - it's often concise
-      if (data.description && data.description.length <= 100) {
-        description = data.description;
-      } else {
-        // Extract from extract text - look for occupation patterns
-        const extract = data.extract || '';
+  // Try multiple variations of the name
+  const nameVariations = [
+    name,
+    name + ' (person)',
+    name + ' (character)'
+  ];
+  
+  for (const nameVariation of nameVariations) {
+    try {
+      const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(nameVariation)}`;
+      const response = await fetch(searchUrl);
+      if (response.ok) {
+        const data = await response.json();
         
-        // Try to find patterns like "Xth President" or "Xth and Yth President"
-        const presidentMatch = extract.match(/(\d+(?:st|nd|rd|th)?(?:\s+and\s+\d+(?:st|nd|rd|th)?)?\s+(?:U\.?S\.?|United States)?\s*President(?:,?\s+[^,\.]+)?)/i);
-        if (presidentMatch) {
-          description = presidentMatch[1].trim().replace(/\s+/g, ' ');
+        let imageUrl = null;
+        if (data.original && data.original.source) {
+          imageUrl = data.original.source;
+        } else if (data.thumbnail && data.thumbnail.source) {
+          imageUrl = data.thumbnail.source.replace('/thumb/', '/').split('/').slice(0, -1).join('/');
+        }
+        
+        // Extract short occupation/description
+        let description = '';
+        if (data.description && data.description.length <= 100) {
+          description = data.description;
         } else {
-          // Try common occupation patterns (Businessman, Actor, Singer, etc.)
-          const occupationPatterns = [
-            /(Businessman[^,\.]*)/i,
-            /(Actor[^,\.]*)/i,
-            /(Singer[^,\.]*)/i,
-            /(Politician[^,\.]*)/i,
-            /(Writer[^,\.]*)/i,
-            /(Athlete[^,\.]*)/i,
-            /(Artist[^,\.]*)/i
-          ];
-          
-          const occupations = [];
-          for (const pattern of occupationPatterns) {
-            const match = extract.match(pattern);
-            if (match && occupations.length < 2) {
-              occupations.push(match[1].trim());
-            }
-          }
-          
-          if (occupations.length > 0) {
-            description = occupations.join(', ');
+          const extract = data.extract || '';
+          const presidentMatch = extract.match(/(\d+(?:st|nd|rd|th)?(?:\s+and\s+\d+(?:st|nd|rd|th)?)?\s+(?:U\.?S\.?|United States)?\s*President(?:,?\s+[^,\.]+)?)/i);
+          if (presidentMatch) {
+            description = presidentMatch[1].trim().replace(/\s+/g, ' ');
           } else {
-            // Fallback: get first meaningful part after name
-            const firstSentence = extract.split('.')[0];
-            const namePattern = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[,\\-–—]?\\s*`, 'i');
-            let fallbackDesc = firstSentence.replace(namePattern, '').trim();
-            // Take only up to first comma or 60 chars
-            const commaIndex = fallbackDesc.indexOf(',');
-            if (commaIndex > 0 && commaIndex < 60) {
-              fallbackDesc = fallbackDesc.substring(0, commaIndex);
-            } else if (fallbackDesc.length > 60) {
-              fallbackDesc = fallbackDesc.substring(0, 57) + '...';
+            const occupationPatterns = [
+              /(Businessman[^,\.]*)/i,
+              /(Actor[^,\.]*)/i,
+              /(Singer[^,\.]*)/i,
+              /(Politician[^,\.]*)/i,
+              /(Writer[^,\.]*)/i,
+              /(Athlete[^,\.]*)/i,
+              /(Artist[^,\.]*)/i
+            ];
+            
+            const occupations = [];
+            for (const pattern of occupationPatterns) {
+              const match = extract.match(pattern);
+              if (match && occupations.length < 2) {
+                occupations.push(match[1].trim());
+              }
             }
-            description = fallbackDesc;
+            
+            if (occupations.length > 0) {
+              description = occupations.join(', ');
+            } else {
+              const firstSentence = extract.split('.')[0];
+              const namePattern = new RegExp(`^${nameVariation.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[,\\-–—]?\\s*`, 'i');
+              let fallbackDesc = firstSentence.replace(namePattern, '').trim();
+              const commaIndex = fallbackDesc.indexOf(',');
+              if (commaIndex > 0 && commaIndex < 60) {
+                fallbackDesc = fallbackDesc.substring(0, commaIndex);
+              } else if (fallbackDesc.length > 60) {
+                fallbackDesc = fallbackDesc.substring(0, 57) + '...';
+              }
+              description = fallbackDesc;
+            }
           }
         }
+        
+        // Return first successful result (with or without image)
+        return {
+          imageUrl: imageUrl || null,
+          description: description || ''
+        };
       }
-      
-      return {
-        imageUrl,
-        description: description || ''
-      };
+    } catch (error) {
+      // Continue to next variation
+      continue;
     }
-  } catch (error) {
-    console.error('Error fetching info from Wikipedia:', error);
   }
+  
   return { imageUrl: null, description: null };
 }
 
@@ -251,15 +220,18 @@ app.get('/api/game/info/:name', async (req, res) => {
 app.post('/api/game/start', async (req, res) => {
   try {
     const sessionId = Date.now().toString();
-    // Vary first question - sometimes gender, sometimes real/fictional
+    // Vary first question - use many different starting points
     const firstQuestionVariants = [
-      'Ask your first question. Vary it - sometimes start with gender like "Is your character a female?" or "Is your character\'s gender female?", sometimes with "Is your character real?" Start directly with a short question (3-5 words) to eliminate as many people as possible.',
-      'Ask your first question. Choose strategically - either gender (like "Is your character a female?" or "Is your character a male?") or real/fictional ("Is your character real?"). Start directly with a short question (3-5 words).',
-      'Ask your first question. Start with either gender or real/fictional status. Keep it short (3-5 words). Examples: "Is your character a female?" or "Is your character real?" or "Is your character\'s gender female?"'
+      'Ask your first question. Choose strategically from: gender ("Is your character a female?" or "Is your character a male?"), real/fictional ("Is your character real?"), nationality ("Is your character American?"), time period ("Is your character from the 21st century?"), or media presence ("Does your character appear in movies?"). Start directly with a short question (3-5 words) to eliminate as many people as possible.',
+      'Ask your first question. Vary it completely - could be about gender, real/fictional status, nationality, time period, media presence, or even appearance. Choose the question that would eliminate the most possibilities. Start directly with a short question (3-5 words).',
+      'Ask your first question. Be creative and strategic - don\'t always start the same way. Consider: gender, real/fictional, nationality, time period, age range, media presence, or distinctive features. Choose what would narrow down options fastest. Start directly with a short question (3-5 words).',
+      'Ask your first question. Think like Akinator - what single question eliminates the most people? Consider gender, real/fictional, nationality, time period, or distinctive characteristics. Start directly with a short question (3-5 words).',
+      'Ask your first question. Vary your approach - could start with gender, real/fictional, nationality, time period, or even a distinctive feature. Choose strategically. Start directly with a short question (3-5 words).'
     ];
+    
     const randomVariant = firstQuestionVariants[Math.floor(Math.random() * firstQuestionVariants.length)];
     
-    const systemPrompt = 'You are playing Akinator. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. Ask diverse strategic questions - mix gender, real/fictional, occupation, hobbies, relationships, appearance, time period, nationality, etc. Don\'t focus only on occupation. Questions should be varied and unique. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves. After asking enough strategic questions (8-15 questions), make a guess formatted as: "I think you are thinking of: [NAME]". When guessing, be confident with well-known figures - if clues point to someone famous like Donald Trump (president, businessman), Barack Obama (president), Taylor Swift (singer), etc., guess them.';
+    const systemPrompt = 'You are playing Akinator. Your response must be ONLY a yes/no question. NO greetings. NO reactions. NO emojis. NO markdown formatting. NO bold text. NO asterisks. NO parenthetical explanations. NO exclamations. BE SPECIFIC - avoid vague terms like "entertainer", "famous person", "celebrity". Instead ask specific questions like "Is your character a musician?", "Is your character an actor?", "Does your character appear in movies?", "Is your character a singer?". DO NOT ask about names directly (e.g., "Is your character\'s first name...", "Does your character\'s name start with..."). CRITICAL: VARY YOUR QUESTIONS - Never ask about the same topic twice in a row. Switch between: gender, real/fictional status, occupation, relationships, appearance (hair color, eye color, height, distinctive features), time period, nationality, achievements, hobbies. IMPORTANT: After 5-6 questions, start asking VERY SPECIFIC and PERSONAL questions about appearance and unique characteristics - "Does your character have blonde hair?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?". Ask 10-20 specific questions before guessing to ensure accuracy. Each question should eliminate large groups of possibilities. Ask strategically to narrow down quickly. Questions should be varied and unique. Only if you are really stuck after many questions (20+), you may ask "Does your character\'s name rhyme with [word]?" as a last resort. The person could be ANYONE - real or fictional, famous or obscure, historical or modern, celebrities, characters, adult film actors/actresses, adult content creators, or even the player themselves. After asking enough strategic and specific questions (15-25 questions), make a guess formatted as: "I think you are thinking of: [NAME]". When guessing, be confident with well-known figures - if clues point to someone famous like Donald Trump (president, businessman), Barack Obama (president), Taylor Swift (singer), etc., guess them.';
     
     const conversationHistory = [{
       role: 'user',
@@ -368,9 +340,42 @@ app.post('/api/game/answer', async (req, res) => {
     const yesCount = recentAnswers.filter(a => a.includes('yes') || a.includes('probably')).length;
     const confidence = yesCount / Math.max(recentAnswers.length, 1);
 
-    // Determine if we should encourage a guess (after 6+ questions for faster guessing)
+    // Determine if we should encourage a guess (after 15+ questions for better accuracy)
     const questionCount = session.conversationHistory.filter(m => m.role === 'assistant').length;
-    const shouldEncourageGuess = questionCount >= 6 && (confidence > 0.4 || questionCount >= 10);
+    const shouldEncourageGuess = questionCount >= 15 && (confidence > 0.5 || questionCount >= 20);
+
+    // Analyze answers to guide next question - be adaptive
+    const allAnswers = session.conversationHistory
+      .filter(m => m.role === 'user')
+      .map(m => m.content.toLowerCase());
+    
+    const allQuestions = session.conversationHistory
+      .filter(m => m.role === 'assistant' && !m.content.toLowerCase().includes('i think you are thinking of'))
+      .map(m => m.content.toLowerCase());
+    
+    // Build adaptive instruction based on answers
+    let adaptiveInstruction = '';
+    if (allAnswers.length > 0) {
+      const lastAnswer = allAnswers[allAnswers.length - 1];
+      const isYes = lastAnswer.includes('yes') || lastAnswer.includes('probably');
+      
+      // If answered yes to real person, ask about time period or nationality
+      if (allQuestions.some(q => q.includes('real') || q.includes('fictional')) && isYes && allQuestions.some(q => q.includes('real'))) {
+        adaptiveInstruction = ' Based on the answer, ask about time period, nationality, or specific achievements - NOT occupation yet.';
+      }
+      // If answered yes to gender, ask about appearance or relationships
+      else if (allQuestions.some(q => q.includes('gender') || q.includes('female') || q.includes('male')) && isYes) {
+        adaptiveInstruction = ' Based on the answer, ask about appearance, relationships, or distinctive features - NOT occupation yet.';
+      }
+      // If answered yes to occupation, ask about specific appearance or achievements
+      else if (allQuestions.some(q => ['actor', 'singer', 'musician', 'athlete', 'politician', 'occupation', 'job'].some(kw => q.includes(kw))) && isYes) {
+        adaptiveInstruction = ' Based on the answer, ask about SPECIFIC appearance details, achievements, or distinctive features - NOT another occupation question.';
+      }
+      // If answered no, switch to completely different topic
+      else if (!isYes && (lastAnswer.includes('no') || lastAnswer.includes('probably not'))) {
+        adaptiveInstruction = ' Based on the "no" answer, switch to a COMPLETELY different topic - don\'t ask similar questions.';
+      }
+    }
 
     // Check recent questions to encourage variety
     const recentQuestions = session.conversationHistory
@@ -378,45 +383,124 @@ app.post('/api/game/answer', async (req, res) => {
       .slice(-3)
       .map(m => m.content.toLowerCase());
     
-    // Detect if questions are too similar (e.g., all about acting/job)
-    const occupationKeywords = ['actor', 'act', 'movie', 'film', 'role', 'character', 'job', 'occupation', 'profession', 'work', 'career'];
+    // Detect if questions are too similar - track multiple topic categories
+    const occupationKeywords = ['actor', 'act', 'movie', 'film', 'role', 'character', 'job', 'occupation', 'profession', 'work', 'career', 'singer', 'musician', 'artist', 'director', 'writer', 'performer', 'entertainer'];
+    const genderKeywords = ['male', 'female', 'man', 'woman', 'gender', 'boy', 'girl'];
+    const realFictionalKeywords = ['real', 'fictional', 'fictional character', 'real person', 'exists', 'made up'];
+    const appearanceKeywords = ['hair', 'eye', 'tall', 'short', 'appearance', 'look', 'wear', 'clothing', 'dress', 'bald', 'beard', 'mustache', 'glasses', 'tattoo', 'piercing', 'skin', 'weight', 'build', 'muscle', 'thin', 'fat', 'slim', 'curly', 'straight', 'blonde', 'brunette', 'red', 'black', 'brown', 'blue', 'green', 'color'];
+    const relationshipKeywords = ['married', 'single', 'relationship', 'spouse', 'partner', 'parent', 'child', 'sibling'];
+    const timeKeywords = ['century', 'decade', 'born', 'died', 'alive', 'historical', 'modern', 'ancient', 'year'];
+    const nationalityKeywords = ['american', 'british', 'french', 'german', 'japanese', 'chinese', 'nationality', 'country', 'from'];
+    
     const recentOccupationCount = recentQuestions.filter(q => 
-      occupationKeywords.some(keyword => q.includes(keyword))
+      occupationKeywords.some(keyword => q.toLowerCase().includes(keyword))
+    ).length;
+    const recentGenderCount = recentQuestions.filter(q => 
+      genderKeywords.some(keyword => q.toLowerCase().includes(keyword))
+    ).length;
+    const recentRealFictionalCount = recentQuestions.filter(q => 
+      realFictionalKeywords.some(keyword => q.toLowerCase().includes(keyword))
+    ).length;
+    const recentAppearanceCount = recentQuestions.filter(q => 
+      appearanceKeywords.some(keyword => q.toLowerCase().includes(keyword))
+    ).length;
+    const recentRelationshipCount = recentQuestions.filter(q => 
+      relationshipKeywords.some(keyword => q.toLowerCase().includes(keyword))
+    ).length;
+    const recentTimeCount = recentQuestions.filter(q => 
+      timeKeywords.some(keyword => q.toLowerCase().includes(keyword))
+    ).length;
+    const recentNationalityCount = recentQuestions.filter(q => 
+      nationalityKeywords.some(keyword => q.toLowerCase().includes(keyword))
     ).length;
     
     let varietyInstruction = '';
-    if (recentOccupationCount >= 2) {
-      varietyInstruction = 'IMPORTANT: You just asked about occupation/acting multiple times. Switch to a COMPLETELY DIFFERENT topic now - ask about gender, real/fictional status, relationships, appearance, time period, nationality, hobbies, or media presence. Do NOT ask another occupation-related question.';
+    
+    // Strong variety enforcement - switch topics after just 1 similar question
+    if (recentOccupationCount >= 1) {
+      varietyInstruction = 'CRITICAL: You just asked about occupation/work. You are FORBIDDEN from asking about occupation again. Switch to a COMPLETELY DIFFERENT topic NOW - ask about appearance (hair color, eye color, height, distinctive features), relationships, time period, nationality, hobbies, achievements, media presence, or distinctive characteristics. Do NOT ask about actor, singer, musician, athlete, politician, or any other occupation.';
+    } else if (recentGenderCount >= 1) {
+      varietyInstruction = 'CRITICAL: You just asked about gender. Switch to a different topic - ask about real/fictional, occupation, relationships, appearance, time period, nationality, or achievements.';
+    } else if (recentRealFictionalCount >= 1) {
+      varietyInstruction = 'CRITICAL: You just asked about real/fictional. Switch to a different topic - ask about gender, occupation, relationships, appearance, time period, nationality, or achievements.';
+    } else if (recentAppearanceCount >= 1) {
+      varietyInstruction = 'CRITICAL: You just asked about appearance. Switch to a different topic - ask about gender, real/fictional, occupation, relationships, time period, nationality, or achievements.';
+    } else if (recentRelationshipCount >= 1) {
+      varietyInstruction = 'CRITICAL: You just asked about relationships. Switch to a different topic - ask about gender, real/fictional, occupation, appearance, time period, nationality, or achievements.';
+    } else if (recentTimeCount >= 1) {
+      varietyInstruction = 'CRITICAL: You just asked about time period. Switch to a different topic - ask about gender, real/fictional, occupation, relationships, appearance, nationality, or achievements.';
+    } else if (recentNationalityCount >= 1) {
+      varietyInstruction = 'CRITICAL: You just asked about nationality. Switch to a different topic - ask about gender, real/fictional, occupation, relationships, appearance, time period, or achievements.';
     } else if (recentQuestions.length >= 2 && recentQuestions[recentQuestions.length - 1] === recentQuestions[recentQuestions.length - 2]) {
-      varietyInstruction = 'IMPORTANT: Switch to a different type of question. Vary your questions - don\'t repeat the same topic.';
+      varietyInstruction = 'CRITICAL: You just repeated a similar question. Switch to a COMPLETELY different topic immediately.';
+    } else {
+      // Encourage specific appearance questions after a few questions
+      if (questionCount >= 5) {
+        varietyInstruction = 'IMPORTANT: Ask VERY SPECIFIC and PERSONAL questions now - "Does your character have blonde hair?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?". These specific questions help identify the exact person.';
+      } else {
+        varietyInstruction = 'IMPORTANT: Vary your questions strategically. Ask about different topics each time - gender, real/fictional, occupation, relationships, appearance (hair, eyes, height, distinctive features), time period, nationality, achievements. Don\'t ask about the same topic twice in a row. Remember to ask about appearance regularly as it helps narrow down options significantly.';
+      }
     }
     
-    let systemPrompt = 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks, explanations. ' + varietyInstruction + ' Ask diverse questions - gender, real/fictional, occupation, hobbies, relationships, appearance, time period, nationality. Person could be ANYONE. After 8-15 questions, guess: "I think you are thinking of: [NAME]"';
+    let systemPrompt = 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks, explanations. BE SPECIFIC - avoid vague terms like "entertainer", "famous person", "celebrity". DO NOT ask about names directly (e.g., "Is your character\'s first name...", "Does your character\'s name start with..."). ' + varietyInstruction + adaptiveInstruction + ' CRITICAL: VARY YOUR QUESTIONS COMPLETELY - Never ask about the same topic twice in a row. NEVER cycle through occupations (actor, singer, athlete, politician). Switch between: gender, real/fictional status, relationships, appearance (hair color, eye color, height, distinctive features), time period, nationality, achievements, hobbies, media presence, distinctive characteristics. IMPORTANT: After 5-6 questions, start asking VERY SPECIFIC and PERSONAL questions about appearance and unique characteristics - "Does your character have blonde hair?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?". Ask 10-20 specific questions before guessing to ensure accuracy. Each question should eliminate large groups of possibilities. Ask strategically to narrow down quickly. Person could be ANYONE. Only if you are really stuck after many questions (20+), you may ask "Does your character\'s name rhyme with [word]?" as a last resort. After 15-25 questions, guess: "I think you are thinking of: [NAME]"';
     
     if (shouldEncourageGuess) {
       systemPrompt = 'Guess now. Format: "I think you are thinking of: [NAME]". NO emojis, markdown, bold, asterisks, greetings, reactions.';
     }
 
+    // Get ALL previous questions to prevent repetition
+    const allPreviousQuestions = session.conversationHistory
+      .filter(m => m.role === 'assistant' && !m.content.toLowerCase().includes('i think you are thinking of'))
+      .map(m => m.content.toLowerCase().trim());
+    
+    // Add instruction to never repeat questions
+    let noRepeatInstruction = '';
+    if (allPreviousQuestions.length > 0) {
+      noRepeatInstruction = `\n\nCRITICAL: DO NOT REPEAT ANY OF THESE PREVIOUS QUESTIONS: ${allPreviousQuestions.join(' | ')}. Ask a completely NEW question that you have NOT asked before.`;
+    }
+    
     // Use fewer tokens and limit conversation history for faster responses
     const recentHistory = session.conversationHistory.slice(-10); // Only keep last 10 messages
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5-20251101',
       max_tokens: 40,
       temperature: 0.7,
-      system: systemPrompt,
+      system: systemPrompt + noRepeatInstruction,
       messages: recentHistory
     });
 
-    const response = cleanResponse(message.content[0].text);
+    let response = cleanResponse(message.content[0].text);
+    
+    // Check if the response is a duplicate question (not a guess)
+    let isGuess = response.toLowerCase().includes('i think you are thinking of') || 
+                   response.toLowerCase().includes('are you thinking of') ||
+                   response.toLowerCase().includes('you are thinking of');
+    
+    if (!isGuess) {
+      const responseLower = response.toLowerCase().trim();
+      // Check if this question was asked before
+      if (allPreviousQuestions.includes(responseLower)) {
+        // If duplicate, ask Claude again with stronger instruction
+        const retryPrompt = systemPrompt + noRepeatInstruction + '\n\nERROR: You just repeated a question. Ask a DIFFERENT question immediately.';
+        const retryMessage = await anthropic.messages.create({
+          model: 'claude-opus-4-5-20251101',
+          max_tokens: 40,
+          temperature: 0.7,
+          system: retryPrompt,
+          messages: recentHistory
+        });
+        response = cleanResponse(retryMessage.content[0].text);
+        // Re-check if it's a guess after retry
+        isGuess = response.toLowerCase().includes('i think you are thinking of') || 
+                  response.toLowerCase().includes('are you thinking of') ||
+                  response.toLowerCase().includes('you are thinking of');
+      }
+    }
+    
     session.conversationHistory.push({
       role: 'assistant',
       content: response
     });
-
-    // Check if this is a guess
-    const isGuess = response.toLowerCase().includes('i think you are thinking of') || 
-                   response.toLowerCase().includes('are you thinking of') ||
-                   response.toLowerCase().includes('you are thinking of');
 
     // Calculate progress based on questions and confidence
     // Progress increases faster with more "yes" answers
@@ -426,31 +510,48 @@ app.post('/api/game/answer', async (req, res) => {
 
     let guessName = null;
     let guessInfo = null;
+    let guessImage = null;
+    let guessDescription = null;
     
     if (isGuess) {
       guessName = extractGuessName(response);
-      // Fetch Wikipedia info asynchronously - don't wait for it
+      // ALWAYS fetch image - wait for it before responding
       if (guessName) {
-        getInfoForGuess(guessName).then(info => {
+        try {
+          guessInfo = await getInfoForGuess(guessName);
+          guessImage = guessInfo.imageUrl;
+          guessDescription = guessInfo.description;
+          
+          // If Wikipedia didn't return an image, try alternative methods
+          if (!guessImage) {
+            // Try with "person" suffix for better Wikipedia matching
+            const altGuessInfo = await getInfoForGuess(guessName + ' (person)');
+            if (altGuessInfo.imageUrl) {
+              guessImage = altGuessInfo.imageUrl;
+              guessDescription = altGuessInfo.description || guessDescription;
+            }
+          }
+          
           // Store in session for potential later use
           if (session) {
-            session.lastGuessInfo = info;
+            session.lastGuessInfo = { imageUrl: guessImage, description: guessDescription };
           }
-        }).catch(() => {
-          // Ignore errors
-        });
+        } catch (error) {
+          console.error('Error fetching guess image:', error);
+          // Continue even if image fetch fails - but log it
+        }
       }
     }
 
-    // Return immediately without waiting for Wikipedia
+    // Return with image (or null if not found)
     res.json({
       question: response,
       isGuess,
       questionCount: questionCount + 1,
       progress: isGuess ? 100 : progress,
       guessName: guessName || undefined,
-      guessImage: undefined, // Will be fetched async via separate endpoint if needed
-      guessDescription: undefined
+      guessImage: guessImage || undefined,
+      guessDescription: guessDescription || undefined
     });
   } catch (error) {
     console.error('Error processing answer:', error);
@@ -508,15 +609,52 @@ app.post('/api/game/guess-result', async (req, res) => {
 
       // Continue asking questions - use limited history and fewer tokens
       const recentHistory = session.conversationHistory.slice(-10);
+      
+      // Get ALL previous questions to prevent repetition
+      const allPreviousQuestions = session.conversationHistory
+        .filter(m => m.role === 'assistant' && !m.content.toLowerCase().includes('i think you are thinking of'))
+        .map(m => m.content.toLowerCase().trim());
+      
+      // Add instruction to never repeat questions
+      let noRepeatInstruction = '';
+      if (allPreviousQuestions.length > 0) {
+        noRepeatInstruction = `\n\nCRITICAL: DO NOT REPEAT ANY OF THESE PREVIOUS QUESTIONS: ${allPreviousQuestions.join(' | ')}. Ask a completely NEW question that you have NOT asked before.`;
+      }
+      
+      const baseSystemPrompt = 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks. BE SPECIFIC - avoid vague terms like "entertainer", "famous person", "celebrity". DO NOT ask about names directly (e.g., "Is your character\'s first name...", "Does your character\'s name start with..."). CRITICAL: VARY YOUR QUESTIONS COMPLETELY - Never ask about the same topic twice in a row. NEVER cycle through occupations (actor, singer, athlete, politician). Switch between: gender, real/fictional status, relationships, appearance (hair color, eye color, height, distinctive features), time period, nationality, achievements, hobbies, media presence, distinctive characteristics. IMPORTANT: Ask VERY SPECIFIC and PERSONAL questions about appearance and unique characteristics - "Does your character have blonde hair?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?". Ask 10-20 specific questions before guessing to ensure accuracy. Each question should eliminate large groups of possibilities. Ask strategically to narrow down quickly. Person could be ANYONE. Only if you are really stuck after many questions (20+), you may ask "Does your character\'s name rhyme with [word]?" as a last resort. After 15-25 questions, guess: "I think you are thinking of: [NAME]"';
+      
       const message = await anthropic.messages.create({
         model: 'claude-opus-4-5-20251101',
         max_tokens: 40,
         temperature: 0.7,
-        system: 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks. Ask diverse questions - gender, real/fictional, occupation, hobbies, relationships, appearance, time period, nationality. Person could be ANYONE. After 3-5 questions, guess: "I think you are thinking of: [NAME]"',
+        system: baseSystemPrompt + noRepeatInstruction,
         messages: recentHistory
       });
 
-      const nextQuestion = cleanResponse(message.content[0].text);
+      let nextQuestion = cleanResponse(message.content[0].text);
+      
+      // Check if the response is a duplicate question (not a guess)
+      const isGuessCheck = nextQuestion.toLowerCase().includes('i think you are thinking of') || 
+                          nextQuestion.toLowerCase().includes('are you thinking of') ||
+                          nextQuestion.toLowerCase().includes('you are thinking of');
+      
+      if (!isGuessCheck) {
+        const questionLower = nextQuestion.toLowerCase().trim();
+        // Check if this question was asked before
+        if (allPreviousQuestions.includes(questionLower)) {
+          // If duplicate, ask Claude again with stronger instruction
+          const retryPrompt = baseSystemPrompt + noRepeatInstruction + '\n\nERROR: You just repeated a question. Ask a DIFFERENT question immediately.';
+          const retryMessage = await anthropic.messages.create({
+            model: 'claude-opus-4-5-20251101',
+            max_tokens: 40,
+            temperature: 0.7,
+            system: retryPrompt,
+            messages: recentHistory
+          });
+          nextQuestion = cleanResponse(retryMessage.content[0].text);
+        }
+      }
+      
       session.conversationHistory.push({
         role: 'assistant',
         content: nextQuestion
@@ -527,14 +665,6 @@ app.post('/api/game/guess-result', async (req, res) => {
         continue: true
       });
     }
-
-    // Clean up session
-    gameSessions.delete(sessionId);
-
-    res.json({
-      success: true,
-      message: correct ? 'Great! I guessed correctly!' : 'Thanks for playing!'
-    });
   } catch (error) {
     console.error('Error processing guess result:', error);
     console.error('Error details:', error.message, error.stack);
@@ -543,11 +673,6 @@ app.post('/api/game/guess-result', async (req, res) => {
       details: error.message 
     });
   }
-});
-
-// Explicitly serve guess.html
-app.get('/guess.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'guess.html'));
 });
 
 app.listen(PORT, () => {

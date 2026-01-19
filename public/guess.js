@@ -574,9 +574,28 @@ async function submitAnswer(answer) {
                 guessDescription.style.display = 'block';
             }
             
+            // ALWAYS try to show image - fetch if not provided
             if (data.guessImage) {
                 guessImage.src = data.guessImage;
                 guessImageContainer.style.display = 'block';
+            } else if (guessName) {
+                // If no image provided, try to fetch it
+                fetch(`${API_BASE}/game/info/${encodeURIComponent(guessName)}`)
+                    .then(res => res.json())
+                    .then(info => {
+                        if (info.imageUrl) {
+                            guessImage.src = info.imageUrl;
+                            guessImageContainer.style.display = 'block';
+                        } else {
+                            // Show placeholder or hide container
+                            guessImageContainer.style.display = 'none';
+                        }
+                    })
+                    .catch(() => {
+                        guessImageContainer.style.display = 'none';
+                    });
+            } else {
+                guessImageContainer.style.display = 'none';
             }
             
             // 3D model already initialized at page load
@@ -698,9 +717,27 @@ if (gameSession.sessionId && gameSession.question) {
         guessDescription.style.display = 'block';
     }
     
+    // ALWAYS try to show image - fetch if not provided
     if (guessData.guessImage) {
         guessImage.src = guessData.guessImage;
         guessImageContainer.style.display = 'block';
+    } else if (guessData.guessName) {
+        // If no image provided, try to fetch it
+        fetch(`${API_BASE}/game/info/${encodeURIComponent(guessData.guessName)}`)
+            .then(res => res.json())
+            .then(info => {
+                if (info.imageUrl) {
+                    guessImage.src = info.imageUrl;
+                    guessImageContainer.style.display = 'block';
+                } else {
+                    guessImageContainer.style.display = 'none';
+                }
+            })
+            .catch(() => {
+                guessImageContainer.style.display = 'none';
+            });
+    } else {
+        guessImageContainer.style.display = 'none';
     }
     
     // 3D model already initialized at page load

@@ -81,8 +81,8 @@ body {
 /* Game screen and guess screen use wider layout */
 body.game-screen-active,
 body.guess-screen-active {
-    width: 100%;
-    max-width: 1000px;
+    width: 1000px;
+    max-width: 100%;
 }
 
 
@@ -199,11 +199,22 @@ header a h1 {
 
 .screen {
     display: none;
+    width: 100%;
 }
 
 .screen.active {
-    display: block;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
     animation: fadein 2000ms ease-in;
+}
+
+#game-screen.active {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
 }
 
 /* Hide header and 3D logo on guess screen */
