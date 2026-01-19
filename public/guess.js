@@ -473,7 +473,7 @@ async function submitAnswer(answer) {
             
             // Display question number
             if (guessQuestionNumber) {
-                guessQuestionNumber.textContent = `${currentQuestionCount}`;
+                guessQuestionNumber.textContent = `${currentQuestionCount}.`;
             }
             
             if (data.guessDescription) {
@@ -492,7 +492,7 @@ async function submitAnswer(answer) {
             // Continue with questions
             questionText.textContent = data.question;
             if (questionNumber) {
-                questionNumber.textContent = `${currentQuestionCount}`;
+                questionNumber.textContent = `${currentQuestionCount}.`;
             }
         }
 
@@ -513,7 +513,7 @@ if (gameSession.sessionId && gameSession.question) {
     questionText.textContent = gameSession.question;
     currentQuestionCount = gameSession.questionCount || 1;
     if (questionNumber) {
-        questionNumber.textContent = `${currentQuestionCount}`;
+        questionNumber.textContent = `${currentQuestionCount}.`;
     }
     
     // Initialize 3D model for game screen
@@ -549,7 +549,7 @@ if (gameSession.sessionId && gameSession.question) {
         questionText.textContent = data.question;
         currentQuestionCount = 1;
         if (questionNumber) {
-            questionNumber.textContent = `${currentQuestionCount}`;
+            questionNumber.textContent = `${currentQuestionCount}.`;
         }
         
         loading.style.display = 'none';
@@ -570,7 +570,7 @@ if (gameSession.sessionId && gameSession.question) {
     
     // Display question number
     if (guessQuestionNumber && guessData.questionCount) {
-        guessQuestionNumber.textContent = `${guessData.questionCount}`;
+        guessQuestionNumber.textContent = `${guessData.questionCount}.`;
     }
     
     if (guessData.guessDescription) {
