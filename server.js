@@ -486,6 +486,11 @@ app.post('/api/game/guess-result', async (req, res) => {
   }
 });
 
+// Explicitly serve guess.html
+app.get('/guess.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guess.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

@@ -344,16 +344,8 @@ async function loadGuessImage(guessName, existingImageUrl = null) {
 // Start a new game
 async function startGame() {
     try {
-        showScreen(gameScreen);
-        // Initialize 3D model for game screen if not already done
-        const gameCanvas = document.getElementById('noema3d-canvas-game');
-        if (gameCanvas && !gameCanvas.hasAttribute('data-initialized')) {
-            await init3DModel('noema3d-canvas-game');
-            gameCanvas.setAttribute('data-initialized', 'true');
-        }
         loading.style.display = 'block';
-        answerButtons.forEach(btn => btn.disabled = true);
-
+        
         const response = await fetch(`${API_BASE}/game/start`, {
             method: 'POST',
             headers: {
@@ -367,16 +359,22 @@ async function startGame() {
 
         const data = await response.json();
         sessionId = data.sessionId;
-        currentQuestionCount = 1;
-        lastQuestion = data.question;
-        questionText.textContent = data.question;
-        updateProgress(0);
-        loading.style.display = 'none';
-        answerButtons.forEach(btn => btn.disabled = false);
+        
+        // Store session data and redirect to guess.html immediately
+        sessionStorage.setItem('gameSession', JSON.stringify({
+            sessionId: sessionId,
+            question: data.question,
+            questionCount: 1
+        }));
+        
+        // Redirect to guess.html immediately
+        const targetUrl = window.location.origin + '/guess.html';
+        console.log('Redirecting to game page:', targetUrl);
+        window.location.href = targetUrl;
     } catch (error) {
         console.error('Error starting game:', error);
         alert('Failed to start game. Please make sure the server is running.');
-        showScreen(startScreen);
+        loading.style.display = 'none';
     }
 }
 
@@ -404,6 +402,7 @@ async function submitAnswer(answer) {
         }
 
         const data = await response.json();
+        console.log('Response data:', JSON.stringify(data, null, 2)); // Debug: see what we're getting
         currentQuestionCount = data.questionCount;
         
         // Update progress bar
@@ -417,7 +416,9 @@ async function submitAnswer(answer) {
         }
 
         // Check if this is a guess
+        console.log('isGuess value:', data.isGuess); // Debug: check isGuess
         if (data.isGuess) {
+            console.log('GUESS DETECTED - About to redirect!'); // Debug
             updateProgress(100);
             
             // Store the question before showing guess (so continue can work)
@@ -446,9 +447,23 @@ async function submitAnswer(answer) {
             
             // Redirect to guess page immediately - use absolute path
             const targetUrl = window.location.origin + '/guess.html';
-            console.log('Redirecting from', window.location.href, 'to:', targetUrl);
-            window.location.href = targetUrl;
-            return; // Exit early to prevent any other code from running
+            console.log('ABOUT TO REDIRECT from', window.location.href, 'to:', targetUrl);
+            // Force immediate redirect - prevent any other code from running
+            loading.style.display = 'none';
+            answerButtons.forEach(btn => btn.disabled = true);
+            // Multiple redirect methods to ensure it works
+            try {
+                window.location.href = targetUrl;
+                document.location = targetUrl;
+                if (window.location.href !== targetUrl) {
+                    window.location.replace(targetUrl);
+                }
+            } catch (e) {
+                console.error('Redirect error:', e);
+                window.location = targetUrl;
+            }
+            // Force stop execution
+            return;
         } else {
             lastQuestion = data.question;
             questionText.textContent = data.question;

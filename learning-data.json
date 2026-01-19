@@ -13,6 +13,11 @@
       "conversationLength": 41
     }
   ],
-  "correctAnswers": [],
+  "correctAnswers": [
+    {
+      "answer": "Lana Rhoades",
+      "timestamp": "2026-01-18T11:21:10.900Z"
+    }
+  ],
   "questionPatterns": []
 }

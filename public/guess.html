@@ -17,12 +17,43 @@
         }
     </script>
 </head>
-<body class="guess-screen-active">
+<body class="game-screen-active">
     <main>
-        <div id="guess-screen" class="screen active">
-            <div class="game-layout">
-                <div class="game-content">
+        <div id="game-area" class="game-area">
+            <!-- Game Screen (Questions) -->
+            <div id="game-screen" class="screen active">
+                <div class="game-layout">
+                    <div class="model-container">
+                        <canvas id="noema3d-canvas-game"></canvas>
+                    </div>
+                    <div class="game-content">
+                        <div class="speech-bubble">
+                            <div class="question-text" id="question-text">Loading...</div>
+                        </div>
+                        <div class="answer-buttons">
+                            <button class="btn-answer btn-yes" data-answer="Yes">Yes</button>
+                            <button class="btn-answer btn-probably" data-answer="Probably">Probably</button>
+                            <button class="btn-answer btn-dont-know" data-answer="Don't know">Don't know</button>
+                            <button class="btn-answer btn-probably-not" data-answer="Probably not">Probably not</button>
+                            <button class="btn-answer btn-no" data-answer="No">No</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="loading" id="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Thinking...</p>
+                </div>
+            </div>
+
+            <!-- Guess Result Screen -->
+            <div id="guess-screen" class="screen">
+                <div class="game-layout">
+                    <div class="model-container">
+                        <canvas id="noema3d-canvas-guess"></canvas>
+                    </div>
+                    <div class="game-content">
                     <div class="speech-bubble guess-speech-bubble">
+                        <div class="question-number" id="guess-question-number"></div>
                         <h2 class="guess-title">I think you are thinking of:</h2>
                         <div class="guess-image-container" id="guess-image-container" style="display: none;">
                             <img id="guess-image" src="" alt="Guess" class="guess-image">
@@ -30,18 +61,16 @@
                         <div class="guess-text" id="guess-text"></div>
                         <div class="guess-description" id="guess-description"></div>
                     </div>
-                    <div class="guess-buttons">
-                        <button class="btn btn-success" id="correct-btn">Yes, that's correct!</button>
-                        <button class="btn btn-danger" id="wrong-btn">No, that's wrong</button>
-                        <button class="btn btn-primary" id="continue-btn">Continue questioning</button>
+                        <div class="guess-buttons">
+                            <button class="btn btn-success" id="correct-btn">Yes, that's correct!</button>
+                            <button class="btn btn-danger" id="wrong-btn">No, that's wrong</button>
+                            <button class="btn btn-primary" id="continue-btn">Continue questioning</button>
+                        </div>
+                        <div id="wrong-input" style="display: none; margin-top: 20px;">
+                            <input type="text" id="actual-answer" placeholder="Who were you thinking of?" class="input-text">
+                            <button class="btn btn-primary" id="submit-answer-btn">Submit</button>
+                        </div>
                     </div>
-                    <div id="wrong-input" style="display: none; margin-top: 20px;">
-                        <input type="text" id="actual-answer" placeholder="Who were you thinking of?" class="input-text">
-                        <button class="btn btn-primary" id="submit-answer-btn">Submit</button>
-                    </div>
-                </div>
-                <div class="model-container">
-                    <canvas id="noema3d-canvas-guess"></canvas>
                 </div>
             </div>
         </div>
