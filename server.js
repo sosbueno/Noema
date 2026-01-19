@@ -387,7 +387,7 @@ app.post('/api/game/answer', async (req, res) => {
     const occupationKeywords = ['actor', 'act', 'movie', 'film', 'role', 'character', 'job', 'occupation', 'profession', 'work', 'career', 'singer', 'musician', 'artist', 'director', 'writer', 'performer', 'entertainer'];
     const genderKeywords = ['male', 'female', 'man', 'woman', 'gender', 'boy', 'girl'];
     const realFictionalKeywords = ['real', 'fictional', 'fictional character', 'real person', 'exists', 'made up'];
-    const appearanceKeywords = ['hair', 'eye', 'tall', 'short', 'appearance', 'look', 'wear', 'clothing', 'dress', 'bald', 'beard', 'mustache', 'glasses', 'tattoo', 'piercing', 'skin', 'weight', 'build', 'muscle', 'thin', 'fat', 'slim', 'curly', 'straight', 'blonde', 'brunette', 'red', 'black', 'brown', 'blue', 'green', 'color'];
+    const appearanceKeywords = ['hair', 'eye', 'tall', 'short', 'appearance', 'look', 'wear', 'clothing', 'dress', 'bald', 'beard', 'mustache', 'glasses', 'tattoo', 'piercing', 'skin', 'weight', 'build', 'muscle', 'thin', 'fat', 'slim', 'curly', 'straight', 'blonde', 'brunette', 'red', 'black', 'brown', 'blue', 'green', 'color', 'accent', 'voice', 'catchphrase', 'fashion', 'style'];
     const relationshipKeywords = ['married', 'single', 'relationship', 'spouse', 'partner', 'parent', 'child', 'sibling'];
     const timeKeywords = ['century', 'decade', 'born', 'died', 'alive', 'historical', 'modern', 'ancient', 'year'];
     const nationalityKeywords = ['american', 'british', 'french', 'german', 'japanese', 'chinese', 'nationality', 'country', 'from'];
@@ -442,21 +442,29 @@ app.post('/api/game/answer', async (req, res) => {
       }
     }
     
-    let systemPrompt = 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks, explanations. BE SPECIFIC - avoid vague terms like "entertainer", "famous person", "celebrity". DO NOT ask about names directly (e.g., "Is your character\'s first name...", "Does your character\'s name start with..."). ' + varietyInstruction + adaptiveInstruction + ' CRITICAL: VARY YOUR QUESTIONS COMPLETELY - Never ask about the same topic twice in a row. NEVER cycle through occupations (actor, singer, athlete, politician). Switch between: gender, real/fictional status, relationships, appearance (hair color, eye color, height, distinctive features), time period, nationality, achievements, hobbies, media presence, distinctive characteristics. IMPORTANT: After 5-6 questions, start asking VERY SPECIFIC and PERSONAL questions about appearance and unique characteristics - "Does your character have blonde hair?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?". Ask 10-20 specific questions before guessing to ensure accuracy. Each question should eliminate large groups of possibilities. Ask strategically to narrow down quickly. Person could be ANYONE. Only if you are really stuck after many questions (20+), you may ask "Does your character\'s name rhyme with [word]?" as a last resort. After 15-25 questions, guess: "I think you are thinking of: [NAME]"';
+    let systemPrompt = 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks, explanations. BE SPECIFIC - avoid vague terms like "entertainer", "famous person", "celebrity". DO NOT ask about names directly (e.g., "Is your character\'s first name...", "Does your character\'s name start with..."). ' + varietyInstruction + adaptiveInstruction + ' CRITICAL: VARY YOUR QUESTIONS COMPLETELY - Never ask about the same topic twice in a row. NEVER cycle through occupations (actor, singer, athlete, politician). Switch between: gender, real/fictional status, relationships, appearance (hair color, eye color, height, distinctive features), time period, nationality, achievements, hobbies, media presence, distinctive characteristics. IMPORTANT: After 5-6 questions, start asking VERY SPECIFIC and PERSONAL questions about appearance with ENDLESS VARIETY - "Does your character have blonde hair?", "Is your character bald?", "Does your character have a beard?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character tall?", "Does your character have blue eyes?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?", "Does your character have a mustache?", "Is your character overweight?", "Does your character have piercings?". Use ENDLESS VARIETY in appearance questions - never ask similar ones. Ask 15-25 specific questions before guessing to ensure accuracy. Each question should eliminate large groups of possibilities. Ask strategically to narrow down quickly. Person could be ANYONE. Only if you are really stuck after many questions (25+), you may ask "Does your character\'s name rhyme with [word]?" as a last resort. After 15-25 questions, guess: "I think you are thinking of: [NAME]"';
     
     if (shouldEncourageGuess) {
       systemPrompt = 'Guess now. Format: "I think you are thinking of: [NAME]". NO emojis, markdown, bold, asterisks, greetings, reactions.';
     }
 
-    // Get ALL previous questions to prevent repetition
+    // Get ALL previous questions to prevent repetition - use more aggressive matching
     const allPreviousQuestions = session.conversationHistory
       .filter(m => m.role === 'assistant' && !m.content.toLowerCase().includes('i think you are thinking of'))
       .map(m => m.content.toLowerCase().trim());
     
+    // Also extract key words from previous questions for better duplicate detection
+    const previousQuestionWords = new Set();
+    allPreviousQuestions.forEach(q => {
+      // Extract meaningful words (3+ characters, not common words)
+      const words = q.split(/\s+/).filter(w => w.length >= 3 && !['the', 'your', 'character', 'is', 'are', 'does', 'have', 'has', 'was', 'were', 'can', 'could', 'would', 'should'].includes(w.toLowerCase()));
+      words.forEach(w => previousQuestionWords.add(w.toLowerCase()));
+    });
+    
     // Add instruction to never repeat questions
     let noRepeatInstruction = '';
     if (allPreviousQuestions.length > 0) {
-      noRepeatInstruction = `\n\nCRITICAL: DO NOT REPEAT ANY OF THESE PREVIOUS QUESTIONS: ${allPreviousQuestions.join(' | ')}. Ask a completely NEW question that you have NOT asked before.`;
+      noRepeatInstruction = `\n\nCRITICAL: DO NOT REPEAT ANY OF THESE PREVIOUS QUESTIONS: ${allPreviousQuestions.join(' | ')}. You MUST ask a completely NEW question that you have NOT asked before. Do not use the same words or phrases from previous questions.`;
     }
     
     // Use fewer tokens and limit conversation history for faster responses
@@ -478,22 +486,54 @@ app.post('/api/game/answer', async (req, res) => {
     
     if (!isGuess) {
       const responseLower = response.toLowerCase().trim();
-      // Check if this question was asked before
-      if (allPreviousQuestions.includes(responseLower)) {
-        // If duplicate, ask Claude again with stronger instruction
-        const retryPrompt = systemPrompt + noRepeatInstruction + '\n\nERROR: You just repeated a question. Ask a DIFFERENT question immediately.';
+      const responseWords = new Set(responseLower.split(/\s+/).filter(w => w.length >= 3));
+      
+      // Check if this question was asked before (exact match)
+      let isDuplicate = allPreviousQuestions.includes(responseLower);
+      
+      // Also check for similar questions (70% word overlap)
+      if (!isDuplicate && previousQuestionWords.size > 0) {
+        const matchingWords = Array.from(responseWords).filter(w => previousQuestionWords.has(w));
+        const similarity = matchingWords.length / Math.max(responseWords.size, previousQuestionWords.size);
+        if (similarity > 0.7) {
+          isDuplicate = true;
+        }
+      }
+      
+      // Retry up to 3 times if duplicate
+      let retryCount = 0;
+      while (isDuplicate && retryCount < 3) {
+        const retryPrompt = systemPrompt + noRepeatInstruction + `\n\nERROR: You just repeated or asked a very similar question. Ask a COMPLETELY DIFFERENT question with different words. Previous questions: ${allPreviousQuestions.slice(-5).join(' | ')}`;
         const retryMessage = await anthropic.messages.create({
           model: 'claude-opus-4-5-20251101',
           max_tokens: 40,
-          temperature: 0.7,
+          temperature: 0.8, // Increase temperature for more variety
           system: retryPrompt,
           messages: recentHistory
         });
         response = cleanResponse(retryMessage.content[0].text);
+        const newResponseLower = response.toLowerCase().trim();
+        const newResponseWords = new Set(newResponseLower.split(/\s+/).filter(w => w.length >= 3));
+        
+        // Re-check if duplicate
+        isDuplicate = allPreviousQuestions.includes(newResponseLower);
+        if (!isDuplicate && previousQuestionWords.size > 0) {
+          const matchingWords = Array.from(newResponseWords).filter(w => previousQuestionWords.has(w));
+          const similarity = matchingWords.length / Math.max(newResponseWords.size, previousQuestionWords.size);
+          if (similarity > 0.7) {
+            isDuplicate = true;
+          } else {
+            isDuplicate = false;
+          }
+        }
+        
         // Re-check if it's a guess after retry
         isGuess = response.toLowerCase().includes('i think you are thinking of') || 
                   response.toLowerCase().includes('are you thinking of') ||
                   response.toLowerCase().includes('you are thinking of');
+        if (isGuess) break;
+        
+        retryCount++;
       }
     }
     
@@ -610,18 +650,26 @@ app.post('/api/game/guess-result', async (req, res) => {
       // Continue asking questions - use limited history and fewer tokens
       const recentHistory = session.conversationHistory.slice(-10);
       
-      // Get ALL previous questions to prevent repetition
+      // Get ALL previous questions to prevent repetition - use more aggressive matching
       const allPreviousQuestions = session.conversationHistory
         .filter(m => m.role === 'assistant' && !m.content.toLowerCase().includes('i think you are thinking of'))
         .map(m => m.content.toLowerCase().trim());
       
+      // Also extract key words from previous questions for better duplicate detection
+      const previousQuestionWords = new Set();
+      allPreviousQuestions.forEach(q => {
+        // Extract meaningful words (3+ characters, not common words)
+        const words = q.split(/\s+/).filter(w => w.length >= 3 && !['the', 'your', 'character', 'is', 'are', 'does', 'have', 'has', 'was', 'were', 'can', 'could', 'would', 'should'].includes(w.toLowerCase()));
+        words.forEach(w => previousQuestionWords.add(w.toLowerCase()));
+      });
+      
       // Add instruction to never repeat questions
       let noRepeatInstruction = '';
       if (allPreviousQuestions.length > 0) {
-        noRepeatInstruction = `\n\nCRITICAL: DO NOT REPEAT ANY OF THESE PREVIOUS QUESTIONS: ${allPreviousQuestions.join(' | ')}. Ask a completely NEW question that you have NOT asked before.`;
+        noRepeatInstruction = `\n\nCRITICAL: DO NOT REPEAT ANY OF THESE PREVIOUS QUESTIONS: ${allPreviousQuestions.join(' | ')}. You MUST ask a completely NEW question that you have NOT asked before. Do not use the same words or phrases from previous questions.`;
       }
       
-      const baseSystemPrompt = 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks. BE SPECIFIC - avoid vague terms like "entertainer", "famous person", "celebrity". DO NOT ask about names directly (e.g., "Is your character\'s first name...", "Does your character\'s name start with..."). CRITICAL: VARY YOUR QUESTIONS COMPLETELY - Never ask about the same topic twice in a row. NEVER cycle through occupations (actor, singer, athlete, politician). Switch between: gender, real/fictional status, relationships, appearance (hair color, eye color, height, distinctive features), time period, nationality, achievements, hobbies, media presence, distinctive characteristics. IMPORTANT: Ask VERY SPECIFIC and PERSONAL questions about appearance and unique characteristics - "Does your character have blonde hair?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?". Ask 10-20 specific questions before guessing to ensure accuracy. Each question should eliminate large groups of possibilities. Ask strategically to narrow down quickly. Person could be ANYONE. Only if you are really stuck after many questions (20+), you may ask "Does your character\'s name rhyme with [word]?" as a last resort. After 15-25 questions, guess: "I think you are thinking of: [NAME]"';
+      const baseSystemPrompt = 'ONLY a yes/no question. NO greetings, reactions, emojis, markdown, bold, asterisks. BE SPECIFIC - avoid vague terms like "entertainer", "famous person", "celebrity". DO NOT ask about names directly (e.g., "Is your character\'s first name...", "Does your character\'s name start with..."). CRITICAL: VARY YOUR QUESTIONS COMPLETELY - Never ask about the same topic twice in a row. NEVER cycle through occupations (actor, singer, athlete, politician). Switch between: gender, real/fictional status, relationships, appearance (hair color, eye color, height, distinctive features), time period, nationality, achievements, hobbies, media presence, distinctive characteristics. IMPORTANT: Ask VERY SPECIFIC and PERSONAL questions about appearance with ENDLESS VARIETY - "Does your character have blonde hair?", "Is your character bald?", "Does your character have a beard?", "Is your character known for wearing glasses?", "Does your character have tattoos?", "Is your character tall?", "Does your character have blue eyes?", "Is your character known for a specific hairstyle?", "Does your character have a distinctive accent?", "Is your character known for a specific fashion style?", "Does your character have a unique voice?", "Is your character known for a catchphrase?", "Does your character have a mustache?", "Is your character overweight?", "Does your character have piercings?". Use ENDLESS VARIETY in appearance questions - never ask similar ones. Ask 15-25 specific questions before guessing to ensure accuracy. Each question should eliminate large groups of possibilities. Ask strategically to narrow down quickly. Person could be ANYONE. Only if you are really stuck after many questions (25+), you may ask "Does your character\'s name rhyme with [word]?" as a last resort. After 15-25 questions, guess: "I think you are thinking of: [NAME]"';
       
       const message = await anthropic.messages.create({
         model: 'claude-opus-4-5-20251101',
@@ -640,18 +688,54 @@ app.post('/api/game/guess-result', async (req, res) => {
       
       if (!isGuessCheck) {
         const questionLower = nextQuestion.toLowerCase().trim();
-        // Check if this question was asked before
-        if (allPreviousQuestions.includes(questionLower)) {
-          // If duplicate, ask Claude again with stronger instruction
-          const retryPrompt = baseSystemPrompt + noRepeatInstruction + '\n\nERROR: You just repeated a question. Ask a DIFFERENT question immediately.';
+        const questionWords = new Set(questionLower.split(/\s+/).filter(w => w.length >= 3));
+        
+        // Check if this question was asked before (exact match)
+        let isDuplicate = allPreviousQuestions.includes(questionLower);
+        
+        // Also check for similar questions (70% word overlap)
+        if (!isDuplicate && previousQuestionWords.size > 0) {
+          const matchingWords = Array.from(questionWords).filter(w => previousQuestionWords.has(w));
+          const similarity = matchingWords.length / Math.max(questionWords.size, previousQuestionWords.size);
+          if (similarity > 0.7) {
+            isDuplicate = true;
+          }
+        }
+        
+        // Retry up to 3 times if duplicate
+        let retryCount = 0;
+        while (isDuplicate && retryCount < 3) {
+          const retryPrompt = baseSystemPrompt + noRepeatInstruction + `\n\nERROR: You just repeated or asked a very similar question. Ask a COMPLETELY DIFFERENT question with different words. Previous questions: ${allPreviousQuestions.slice(-5).join(' | ')}`;
           const retryMessage = await anthropic.messages.create({
             model: 'claude-opus-4-5-20251101',
             max_tokens: 40,
-            temperature: 0.7,
+            temperature: 0.8, // Increase temperature for more variety
             system: retryPrompt,
             messages: recentHistory
           });
           nextQuestion = cleanResponse(retryMessage.content[0].text);
+          const newQuestionLower = nextQuestion.toLowerCase().trim();
+          const newQuestionWords = new Set(newQuestionLower.split(/\s+/).filter(w => w.length >= 3));
+          
+          // Re-check if duplicate
+          isDuplicate = allPreviousQuestions.includes(newQuestionLower);
+          if (!isDuplicate && previousQuestionWords.size > 0) {
+            const matchingWords = Array.from(newQuestionWords).filter(w => previousQuestionWords.has(w));
+            const similarity = matchingWords.length / Math.max(newQuestionWords.size, previousQuestionWords.size);
+            if (similarity > 0.7) {
+              isDuplicate = true;
+            } else {
+              isDuplicate = false;
+            }
+          }
+          
+          // Re-check if it's a guess after retry
+          isGuessCheck = nextQuestion.toLowerCase().includes('i think you are thinking of') || 
+                        nextQuestion.toLowerCase().includes('are you thinking of') ||
+                        nextQuestion.toLowerCase().includes('you are thinking of');
+          if (isGuessCheck) break;
+          
+          retryCount++;
         }
       }
       
