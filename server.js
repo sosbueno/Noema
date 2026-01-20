@@ -1215,6 +1215,20 @@ app.post('/api/game/guess-result', async (req, res) => {
   }
 });
 
+// API endpoint to clear all interactions
+app.delete('/api/monitor/conversations', async (req, res) => {
+  try {
+    if (interactionsCollection) {
+      await interactionsCollection.deleteMany({});
+      console.log('All interactions cleared from MongoDB');
+    }
+    res.json({ success: true, message: 'All interactions cleared' });
+  } catch (error) {
+    console.error('Error clearing interactions:', error);
+    res.status(500).json({ error: 'Failed to clear interactions' });
+  }
+});
+
 // API endpoint to get all interactions for monitoring
 app.get('/api/monitor/conversations', async (req, res) => {
   try {

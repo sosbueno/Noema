@@ -205,6 +205,9 @@
             color: #ff6b35;
             margin: 0;
             font-weight: bold;
+            -webkit-text-stroke: 0.5px #000000;
+            text-stroke: 0.5px #000000;
+            text-shadow: none;
         }
         
         .status-badge {
@@ -233,6 +236,9 @@
             line-height: 1.5;
             min-height: 48px;
             margin: 0;
+            -webkit-text-stroke: 0.5px #000000;
+            text-stroke: 0.5px #000000;
+            text-shadow: none;
         }
         
         .card-meta {
@@ -248,6 +254,15 @@
             display: flex;
             align-items: center;
             gap: 5px;
+            -webkit-text-stroke: 0.3px #000000;
+            text-stroke: 0.3px #000000;
+            text-shadow: none;
+        }
+        
+        .meta-item span:not(.meta-icon) {
+            -webkit-text-stroke: 0.3px #000000;
+            text-stroke: 0.3px #000000;
+            text-shadow: none;
         }
         
         .meta-icon {
@@ -268,6 +283,15 @@
             display: flex;
             align-items: center;
             gap: 5px;
+            -webkit-text-stroke: 0.3px #000000;
+            text-stroke: 0.3px #000000;
+            text-shadow: none;
+        }
+        
+        .card-date span:not(.meta-icon) {
+            -webkit-text-stroke: 0.3px #000000;
+            text-stroke: 0.3px #000000;
+            text-shadow: none;
         }
         
         .card-actions {
@@ -727,14 +751,19 @@
                 const firstAssistantMessage = conv.messages?.find(m => m.role === 'assistant')?.content;
                 const firstMessage = firstUserMessage || firstAssistantMessage || conv.messages?.[0]?.content || 'No messages';
                 const messageCount = conv.messages?.length || 0;
-                const date = new Date(conv.lastUpdate || conv.updatedAt || Date.now());
                 
-                // Calculate duration (time from first message to last update)
+                // Get accurate date from lastUpdate (which is a timestamp)
+                const lastUpdateTime = typeof conv.lastUpdate === 'number' ? conv.lastUpdate : (conv.lastUpdate ? new Date(conv.lastUpdate).getTime() : Date.now());
+                const date = new Date(lastUpdateTime);
+                
+                // Calculate duration accurately (time from first message to last update)
                 let duration = 0;
                 if (conv.messages && conv.messages.length > 1) {
-                    const firstMsgTime = conv.createdAt ? new Date(conv.createdAt).getTime() : date.getTime() - 60000;
-                    const lastMsgTime = date.getTime();
-                    duration = Math.floor((lastMsgTime - firstMsgTime) / 1000);
+                    // Use createdAt if available, otherwise estimate from first message
+                    const createdAt = conv.createdAt ? (typeof conv.createdAt === 'number' ? conv.createdAt : new Date(conv.createdAt).getTime()) : (lastUpdateTime - 60000);
+                    const firstMsgTime = createdAt;
+                    const lastMsgTime = lastUpdateTime;
+                    duration = Math.max(0, Math.floor((lastMsgTime - firstMsgTime) / 1000));
                 }
                 
                 // Format session ID nicely (short version)
@@ -763,23 +792,14 @@
                                 <span>${formatDate(date)}</span>
                             </div>
                             <div class="card-actions">
-                                <span class="action-icon view-icon" data-session-id="${conv.sessionId}">👁</span>
-                                <span class="action-icon download-icon" data-session-id="${conv.sessionId}">⬇</span>
+                                <span class="action-icon download-icon" data-session-id="${conv.sessionId}" title="Download as TXT">⬇</span>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
             
-            // Add click handlers
-            document.querySelectorAll('.view-icon').forEach(icon => {
-                icon.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const sessionId = icon.getAttribute('data-session-id');
-                    showConversationModal(sessionId);
-                });
-            });
-            
+            // Add click handlers for download
             document.querySelectorAll('.download-icon').forEach(icon => {
                 icon.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -822,18 +842,30 @@
             const conv = allConversations.find(c => c.sessionId === sessionId);
             if (!conv) return;
             
-            const data = {
-                sessionId: conv.sessionId,
-                lastUpdate: new Date(conv.lastUpdate).toISOString(),
-                messages: conv.messages
-            };
+            // Format as plain text
+            const lastUpdateTime = typeof conv.lastUpdate === 'number' ? conv.lastUpdate : (conv.lastUpdate ? new Date(conv.lastUpdate).getTime() : Date.now());
+            const date = new Date(lastUpdateTime);
             
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            let textContent = `Noema Interaction Log\n`;
+            textContent += `Session ID: ${conv.sessionId}\n`;
+            textContent += `Date: ${formatDate(date)}\n`;
+            textContent += `Total Messages: ${conv.messages?.length || 0}\n`;
+            textContent += `\n--- Conversation ---\n\n`;
+            
+            conv.messages?.forEach((msg, index) => {
+                const role = msg.role === 'assistant' ? 'Noema' : 'User';
+                textContent += `[${index + 1}] ${role}: ${msg.content}\n\n`;
+            });
+            
+            // Create and download file
+            const blob = new Blob([textContent], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `noema-${sessionId}.json`;
+            a.download = `noema-interaction-${sessionId.substring(0, 8)}.txt`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
         
@@ -874,17 +906,39 @@
         // Initial fetch
         fetchConversations();
         
-        // Reset logs functionality (can be called via console if needed)
+        // Reset logs functionality
         window.resetLogs = async function() {
-            if (confirm('Are you sure you want to reset all logs? This cannot be undone.')) {
-                // Clear local state
-                allConversations = [];
-                filteredConversations = [];
-                updateStats();
-                applyFilters();
-                alert('Local logs cleared. Note: Server-side logs remain in MongoDB.');
+            if (confirm('Are you sure you want to delete ALL logs? This cannot be undone.')) {
+                try {
+                    const response = await fetch(`${API_BASE}/monitor/conversations`, {
+                        method: 'DELETE'
+                    });
+                    if (response.ok) {
+                        // Clear local state
+                        allConversations = [];
+                        filteredConversations = [];
+                        updateStats();
+                        applyFilters();
+                        alert('All logs have been deleted successfully.');
+                    } else {
+                        alert('Failed to delete logs. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error clearing logs:', error);
+                    alert('Failed to delete logs. Please try again.');
+                }
             }
         };
+        
+        // Auto-clear logs on page load (one-time)
+        if (sessionStorage.getItem('logsCleared') !== 'true') {
+            setTimeout(() => {
+                if (confirm('Clear all existing logs and start fresh?')) {
+                    window.resetLogs();
+                    sessionStorage.setItem('logsCleared', 'true');
+                }
+            }, 500);
+        }
         
         // Copy text functionality (CA: ...)
         const copyText = document.getElementById('copy-text');
