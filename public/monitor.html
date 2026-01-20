@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
     <style>
         * {
             margin: 0;
@@ -27,7 +26,8 @@
             min-height: 100vh;
             color: #fff5f0;
             font-family: 'VT323', monospace;
-            padding: 20px;
+            padding: 80px 20px 20px 20px;
+            background-color: #000000;
         }
         
         body * {
@@ -37,11 +37,14 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
+            width: 100%;
         }
         
         .header {
             text-align: center;
             margin-bottom: 30px;
+            margin-top: 20px;
+            display: block !important;
         }
         
         .header h1 {
@@ -58,7 +61,7 @@
         }
         
         .stats-bar {
-            display: flex;
+            display: flex !important;
             justify-content: space-around;
             background: rgba(255, 107, 53, 0.1);
             border: 2px solid #ff6b35;
@@ -67,6 +70,7 @@
             margin-bottom: 30px;
             flex-wrap: wrap;
             gap: 20px;
+            width: 100%;
         }
         
         .stat-item {
@@ -91,11 +95,13 @@
         }
         
         .filters-section {
-            display: flex;
+            display: flex !important;
             gap: 15px;
             margin-bottom: 20px;
             flex-wrap: wrap;
             align-items: center;
+            width: 100%;
+            visibility: visible !important;
         }
         
         .search-box {
@@ -142,19 +148,25 @@
             color: #2c2c2c;
             cursor: pointer;
             min-width: 150px;
+            display: block !important;
+            visibility: visible !important;
         }
         
         .results-count {
             font-size: 18px;
             color: #fff5f0;
             margin-bottom: 20px;
+            font-weight: bold;
+            display: block !important;
         }
         
         .conversations-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)) !important;
             gap: 20px;
             margin-bottom: 40px;
+            width: 100%;
+            visibility: visible !important;
         }
         
         .conversation-card {
