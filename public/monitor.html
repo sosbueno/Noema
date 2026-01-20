@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Noema - Noema Logs</title>
+    <title>Noema, the mind reading AI</title>
+    <link rel="icon" type="image/png" href="/noemafavicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -538,19 +539,14 @@
                 <div class="stat-label" style="font-size: 12px;">interactions</div>
             </div>
             <div class="stat-item">
-                <div class="stat-label">Messages</div>
-                <div class="stat-value" id="total-messages">0</div>
-                <div class="stat-label" style="font-size: 12px;">total</div>
+                <div class="stat-label">Total questions</div>
+                <div class="stat-value" id="total-questions">0</div>
+                <div class="stat-label" style="font-size: 12px;">from Noema</div>
             </div>
             <div class="stat-item">
-                <div class="stat-label">Today</div>
-                <div class="stat-value" id="today-chats">0</div>
-                <div class="stat-label" style="font-size: 12px;">chats</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-label">This Week</div>
-                <div class="stat-value" id="week-chats">0</div>
-                <div class="stat-label" style="font-size: 12px;">chats</div>
+                <div class="stat-label">Interactions today</div>
+                <div class="stat-value" id="today-interactions">0</div>
+                <div class="stat-label" style="font-size: 12px;">interactions</div>
             </div>
         </div>
         
@@ -576,7 +572,7 @@
         <div id="conversations-container" class="conversations-grid">
             <div class="empty-state">
                 <h2>WAITING FOR INTERACTIONS...</h2>
-                <p>No active interactions yet. Start a game to see Neoma in action!</p>
+                <p>No active interactions yet. Start a game to see Noema in action!</p>
             </div>
         </div>
     </div>
@@ -613,7 +609,12 @@
         
         function updateStats() {
             const total = allConversations.length;
-            const totalMessages = allConversations.reduce((sum, conv) => sum + (conv.messages?.length || 0), 0);
+            
+            // Count total questions (only assistant messages from Noema)
+            const totalQuestions = allConversations.reduce((sum, conv) => {
+                const questions = conv.messages?.filter(msg => msg.role === 'assistant').length || 0;
+                return sum + questions;
+            }, 0);
             
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -622,17 +623,9 @@
                 return convDate >= today;
             }).length;
             
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            const weekCount = allConversations.filter(conv => {
-                const convDate = new Date(conv.lastUpdate);
-                return convDate >= weekAgo;
-            }).length;
-            
             document.getElementById('total-conversations').textContent = total;
-            document.getElementById('total-messages').textContent = totalMessages;
-            document.getElementById('today-chats').textContent = todayCount;
-            document.getElementById('week-chats').textContent = weekCount;
+            document.getElementById('total-questions').textContent = totalQuestions;
+            document.getElementById('today-interactions').textContent = todayCount;
         }
         
         function applyFilters() {
